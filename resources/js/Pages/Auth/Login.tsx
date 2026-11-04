@@ -119,7 +119,6 @@ export default function Login({ status }: { status?: string }) {
                             </Button>
                         </form>
 
-                        {/* Fast Role Selection for Testing */}
                     </CardContent>
                 </Card>
 

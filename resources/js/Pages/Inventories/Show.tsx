@@ -16,6 +16,8 @@ import {
     User,
     CheckCircle2,
     AlertCircle,
+    CreditCard,
+    Layers,
 } from 'lucide-react';
 
 interface Item {
@@ -123,7 +125,7 @@ export default function InventoryShow({ inventory }: Props) {
                     }
                 />
 
-                {/* 2. Top Stats Grid */}
+                {/* 2. Top Stats Grid (Clean Unified StatGrid) */}
                 <StatGrid columns={4}>
                     <StatCard
                         title="الموجود الكلي (الصافي)"
@@ -154,20 +156,17 @@ export default function InventoryShow({ inventory }: Props) {
                         value={inventory.total_liabilities}
                         currency="د.ع"
                         color="amber"
-                        icon={Scale}
+                        icon={CreditCard}
                         description="مطلوبين + التزامات كمرك"
                     />
                 </StatGrid>
 
-                {/* 3. Detailed Workspace */}
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
-                    {/* Detailed Excel Items Table */}
-                    <div className="xl:col-span-8 space-y-4">
-                        <Card className="shadow-xs border-border overflow-hidden">
+                {/* 3. Detailed Items Table (Full Width) */}
+                <Card className="shadow-xs border-border overflow-hidden">
                             <CardHeader className="p-4 bg-muted/30 border-b border-border">
                                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                                     <FileSpreadsheet className="h-4 w-4 text-primary" />
-                                    <span>بنود الجرد المسجلة (مطابقة الإكسل)</span>
+                                    <span>بنود ومفردات الجرد التفصيلية</span>
                                 </CardTitle>
                                 {inventory.notes && (
                                     <CardDescription className="text-xs pt-1 text-muted-foreground">
@@ -179,19 +178,27 @@ export default function InventoryShow({ inventory }: Props) {
                             <div className="overflow-x-auto">
                                 <table className="w-full text-xs border-collapse">
                                     <thead>
-                                        <tr className="border-b border-border text-[11px] font-bold">
-                                            <th className="p-2 w-8 text-center bg-muted/60">#</th>
-                                            <th className="p-2 bg-slate-100 dark:bg-slate-900 text-center">نطلب (د.ع)</th>
-                                            <th className="p-2 bg-slate-50 dark:bg-slate-950 text-center">تفاصيل</th>
-                                            <th className="p-2 bg-amber-100/70 dark:bg-amber-950/40 text-center">مطلوبين (د.ع)</th>
-                                            <th className="p-2 bg-amber-50/50 dark:bg-amber-950/20 text-center">تفاصيل</th>
-                                            <th className="p-2 bg-blue-100/70 dark:bg-blue-950/40 text-center">كمرك (د.ع)</th>
-                                            <th className="p-2 bg-blue-50/50 dark:bg-blue-950/20 text-center">تفاصيل</th>
-                                            <th className="p-2 bg-emerald-100/70 dark:bg-emerald-950/40 text-center">نثريات (د.ع)</th>
-                                            <th className="p-2 bg-emerald-50/50 dark:bg-emerald-950/20 text-center">تفاصيل</th>
+                                        <tr className="border-b border-border bg-muted/40 text-[11px] font-semibold text-muted-foreground">
+                                            <th className="p-2.5 w-9 text-center">#</th>
+                                            <th className="p-2.5 text-center min-w-[100px]">
+                                                <span className="font-bold text-foreground">نطلب (د.ع)</span>
+                                            </th>
+                                            <th className="p-2.5 text-center min-w-[130px]">تفاصيل المدين</th>
+                                            <th className="p-2.5 text-center min-w-[100px]">
+                                                <span className="font-bold text-amber-600 dark:text-amber-400">مطلوبين (د.ع)</span>
+                                            </th>
+                                            <th className="p-2.5 text-center min-w-[130px]">تفاصيل الدائن</th>
+                                            <th className="p-2.5 text-center min-w-[100px]">
+                                                <span className="font-bold text-blue-600 dark:text-blue-400">كمرك (د.ع)</span>
+                                            </th>
+                                            <th className="p-2.5 text-center min-w-[130px]">تفاصيل الكمرك</th>
+                                            <th className="p-2.5 text-center min-w-[100px]">
+                                                <span className="font-bold text-emerald-600 dark:text-emerald-400">نثريات (د.ع)</span>
+                                            </th>
+                                            <th className="p-2.5 text-center min-w-[130px]">تفاصيل النثرية</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-border/60">
+                                    <tbody className="divide-y divide-border/50">
                                         {Array.from({ length: maxRows }).map((_, idx) => {
                                             const rec = receivables[idx];
                                             const pay = payables[idx];
@@ -199,49 +206,49 @@ export default function InventoryShow({ inventory }: Props) {
                                             const exp = expenses[idx];
 
                                             return (
-                                                <tr key={idx} className="hover:bg-muted/20">
-                                                    <td className="p-2 text-center text-muted-foreground font-mono text-[11px] bg-muted/20">
+                                                <tr key={idx} className="hover:bg-muted/20 transition-colors">
+                                                    <td className="p-2.5 text-center text-muted-foreground font-mono text-[11px] bg-muted/10">
                                                         {idx + 1}
                                                     </td>
-                                                    <td className="p-2 text-right font-mono font-semibold" dir="ltr">
+                                                    <td className="p-2.5 text-right font-mono font-bold" dir="ltr">
                                                         {rec ? Number(rec.amount).toLocaleString() : '—'}
                                                     </td>
-                                                    <td className="p-2 text-muted-foreground">{rec?.details || '—'}</td>
+                                                    <td className="p-2.5 text-muted-foreground">{rec?.details || '—'}</td>
 
-                                                    <td className="p-2 text-right font-mono font-semibold text-amber-700 dark:text-amber-400" dir="ltr">
+                                                    <td className="p-2.5 text-right font-mono font-bold text-amber-600 dark:text-amber-400" dir="ltr">
                                                         {pay ? Number(pay.amount).toLocaleString() : '—'}
                                                     </td>
-                                                    <td className="p-2 text-muted-foreground">{pay?.details || '—'}</td>
+                                                    <td className="p-2.5 text-muted-foreground">{pay?.details || '—'}</td>
 
-                                                    <td className="p-2 text-right font-mono font-semibold text-blue-700 dark:text-blue-400" dir="ltr">
+                                                    <td className="p-2.5 text-right font-mono font-bold text-blue-600 dark:text-blue-400" dir="ltr">
                                                         {cus ? Number(cus.amount).toLocaleString() : '—'}
                                                     </td>
-                                                    <td className="p-2 text-muted-foreground">{cus?.details || '—'}</td>
+                                                    <td className="p-2.5 text-muted-foreground">{cus?.details || '—'}</td>
 
-                                                    <td className="p-2 text-right font-mono font-semibold text-emerald-700 dark:text-emerald-400" dir="ltr">
+                                                    <td className="p-2.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400" dir="ltr">
                                                         {exp ? Number(exp.amount).toLocaleString() : '—'}
                                                     </td>
-                                                    <td className="p-2 text-muted-foreground">{exp?.details || '—'}</td>
+                                                    <td className="p-2.5 text-muted-foreground">{exp?.details || '—'}</td>
                                                 </tr>
                                             );
                                         })}
                                     </tbody>
                                     <tfoot>
-                                        <tr className="bg-muted font-bold text-xs border-t-2 border-border">
-                                            <td className="p-2 text-center">المجموع</td>
-                                            <td className="p-2 text-right font-mono" dir="ltr">
+                                        <tr className="bg-muted/50 font-bold text-xs border-t-2 border-border">
+                                            <td className="p-3 text-center">المجموع</td>
+                                            <td className="p-3 text-right font-mono" dir="ltr">
                                                 {Number(inventory.total_receivables).toLocaleString()} د.ع
                                             </td>
                                             <td></td>
-                                            <td className="p-2 text-right font-mono text-amber-700 dark:text-amber-400" dir="ltr">
+                                            <td className="p-3 text-right font-mono text-amber-600 dark:text-amber-400" dir="ltr">
                                                 {Number(inventory.total_payables).toLocaleString()} د.ع
                                             </td>
                                             <td></td>
-                                            <td className="p-2 text-right font-mono text-blue-700 dark:text-blue-400" dir="ltr">
+                                            <td className="p-3 text-right font-mono text-blue-600 dark:text-blue-400" dir="ltr">
                                                 {Number(inventory.total_customs).toLocaleString()} د.ع
                                             </td>
                                             <td></td>
-                                            <td className="p-2 text-right font-mono text-emerald-700 dark:text-emerald-400" dir="ltr">
+                                            <td className="p-3 text-right font-mono text-emerald-600 dark:text-emerald-400" dir="ltr">
                                                 {Number(inventory.total_expenses).toLocaleString()} د.ع
                                             </td>
                                             <td></td>
@@ -250,127 +257,176 @@ export default function InventoryShow({ inventory }: Props) {
                                 </table>
                             </div>
                         </Card>
-                    </div>
 
-                    {/* Accounting Panels (Right/Side) */}
-                    <div className="xl:col-span-4 space-y-4">
-                        {/* 1. لوحة المجاميع والميزانية العمومية */}
-                        <Card className="shadow-xs border-2 border-slate-900 dark:border-slate-700 overflow-hidden">
-                            <div className="bg-red-600 text-white font-bold text-center py-2 text-sm">
-                                لوحة المجاميع والميزانية العمومية
-                            </div>
+                {/* 4. Accounting Panels Below the Table */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+                    {/* Card 1: خلاصة الميزانية العمومية */}
+                    <Card className="shadow-xs border-border">
+                            <CardHeader className="pb-3 pt-4 px-4 border-b border-border bg-muted/20">
+                                <CardTitle className="text-sm font-bold flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Scale className="h-4 w-4 text-primary" />
+                                        <span>خلاصة الميزانية العمومية</span>
+                                    </div>
+                                    <Badge variant="outline" className="text-[10px] font-mono">
+                                        كشف معتمد
+                                    </Badge>
+                                </CardTitle>
+                            </CardHeader>
 
-                            <div className="divide-y divide-border text-xs">
-                                <div className="flex justify-between items-center p-2.5 bg-slate-100 dark:bg-slate-900">
-                                    <MoneyDisplay amount={inventory.total_receivables} currency="د.ع" size="sm" />
-                                    <span className="font-bold text-slate-800 dark:text-slate-200">نطلب (المدينون)</span>
-                                </div>
-                                <div className="flex justify-between items-center p-2.5 bg-amber-50 dark:bg-amber-950/30">
-                                    <MoneyDisplay amount={inventory.total_payables} currency="د.ع" size="sm" variant="negative" />
-                                    <span className="font-bold text-amber-900 dark:text-amber-300">مطلوبين (الدائنون)</span>
-                                </div>
-                                <div className="flex justify-between items-center p-2.5 bg-blue-50 dark:bg-blue-950/30">
-                                    <MoneyDisplay amount={inventory.total_customs} currency="د.ع" size="sm" variant="blue" />
-                                    <span className="font-bold text-blue-900 dark:text-blue-300">كمرك</span>
-                                </div>
-                                <div className="flex justify-between items-center p-2.5 bg-emerald-50 dark:bg-emerald-950/30">
-                                    <MoneyDisplay amount={inventory.total_expenses} currency="د.ع" size="sm" variant="emerald" />
-                                    <span className="font-bold text-emerald-900 dark:text-emerald-300">نثريات تشغيلية</span>
-                                </div>
-
-                                <div className="h-2 bg-slate-900 dark:bg-slate-800" />
-
-                                <div className="flex justify-between items-center p-2.5 bg-cyan-50 dark:bg-cyan-950/30 font-semibold">
-                                    <MoneyDisplay amount={inventory.actual_cash} currency="د.ع" size="sm" />
-                                    <span className="font-bold text-cyan-950 dark:text-cyan-200">كاش حقيقي (صناديق)</span>
-                                </div>
-                                <div className="flex justify-between items-center p-2.5 bg-cyan-50 dark:bg-cyan-950/30 font-semibold">
-                                    <MoneyDisplay amount={inventory.bank_balance} currency="د.ع" size="sm" />
-                                    <span className="font-bold text-cyan-950 dark:text-cyan-200">رصيد المصارف</span>
+                            <div className="p-4 space-y-3 text-xs">
+                                <div className="space-y-2 pb-3 border-b border-border/60">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-muted-foreground">نطلب (المدينون):</span>
+                                        <MoneyDisplay amount={inventory.total_receivables} currency="د.ع" size="sm" />
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-muted-foreground">مطلوبين (الدائنون):</span>
+                                        <MoneyDisplay amount={inventory.total_payables} currency="د.ع" size="sm" variant="negative" />
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-muted-foreground">كمرك مستحق:</span>
+                                        <MoneyDisplay amount={inventory.total_customs} currency="د.ع" size="sm" variant="blue" />
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-muted-foreground">نثريات تشغيلية:</span>
+                                        <MoneyDisplay amount={inventory.total_expenses} currency="د.ع" size="sm" variant="emerald" />
+                                    </div>
                                 </div>
 
-                                <div className="flex justify-between items-center p-2.5 font-bold bg-muted/60">
-                                    <MoneyDisplay amount={inventory.total_assets} currency="د.ع" size="md" />
-                                    <span>م/ الموجودات</span>
-                                </div>
-                                <div className="flex justify-between items-center p-2.5 font-bold text-rose-600 dark:text-rose-400">
-                                    <MoneyDisplay amount={inventory.total_liabilities} currency="د.ع" size="md" variant="negative" />
-                                    <span>م/ مطلوبات (مطلوبين+كمرك)</span>
-                                </div>
-
-                                <div className="flex justify-between items-center p-3 bg-slate-900 text-white font-bold">
-                                    <span className="font-mono text-base" dir="ltr">
-                                        {Number(inventory.net_worth).toLocaleString()} د.ع
-                                    </span>
-                                    <span className="text-sm">الموجود الكلي (الصافي)</span>
+                                <div className="space-y-2 pb-3 border-b border-border/60">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-muted-foreground font-semibold">كاش حقيقي (صناديق):</span>
+                                        <MoneyDisplay amount={inventory.actual_cash} currency="د.ع" size="sm" />
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-muted-foreground font-semibold">رصيد المصارف:</span>
+                                        <MoneyDisplay amount={inventory.bank_balance} currency="د.ع" size="sm" />
+                                    </div>
                                 </div>
 
-                                <div className="flex justify-between items-center p-2.5 text-muted-foreground">
-                                    <MoneyDisplay amount={inventory.previous_net_worth} currency="د.ع" size="sm" variant="muted" />
-                                    <span>موجود كلي سابق</span>
+                                <div className="space-y-2 pb-3 border-b border-border/60">
+                                    <div className="flex justify-between items-center font-semibold">
+                                        <span>م/ الموجودات (كاش+مصارف+نطلب):</span>
+                                        <MoneyDisplay amount={inventory.total_assets} currency="د.ع" size="md" />
+                                    </div>
+                                    <div className="flex justify-between items-center font-semibold text-rose-600 dark:text-rose-400">
+                                        <span>م/ المطلوبات (مطلوبين+كمرك):</span>
+                                        <MoneyDisplay amount={inventory.total_liabilities} currency="د.ع" size="md" variant="negative" />
+                                    </div>
+                                    <div className="flex justify-between items-center text-muted-foreground pt-1">
+                                        <span>موجود كلي سابق:</span>
+                                        <MoneyDisplay amount={inventory.previous_net_worth} currency="د.ع" size="sm" variant="muted" />
+                                    </div>
                                 </div>
 
-                                <div className="flex justify-between items-center p-3 bg-emerald-500/10 font-bold border-t">
-                                    <MoneyDisplay
-                                        amount={inventory.inventory_profit}
-                                        currency="د.ع"
-                                        size="md"
-                                        variant={Number(inventory.inventory_profit) >= 0 ? 'emerald' : 'negative'}
-                                        showSign
-                                    />
-                                    <span className="text-emerald-800 dark:text-emerald-300">ربح آخر جرد دوري</span>
+                                {/* بطاقات النتائج الصافية الختامية */}
+                                <div className="pt-2 space-y-2">
+                                    <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-between">
+                                        <div>
+                                            <span className="text-[11px] font-bold text-primary block">
+                                                الموجود الكلي (الصافي)
+                                            </span>
+                                            <span className="text-[10px] text-muted-foreground">صافي رأس المال والميزانية</span>
+                                        </div>
+                                        <span className="font-mono text-base font-bold text-primary" dir="ltr">
+                                            {Number(inventory.net_worth).toLocaleString()} د.ع
+                                        </span>
+                                    </div>
+
+                                    <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+                                        <div>
+                                            <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 block">
+                                                ربح آخر جرد دوري
+                                            </span>
+                                            <span className="text-[10px] text-muted-foreground">الفارق المالي المحقق</span>
+                                        </div>
+                                        <MoneyDisplay
+                                            amount={inventory.inventory_profit}
+                                            currency="د.ع"
+                                            size="md"
+                                            variant={Number(inventory.inventory_profit) >= 0 ? 'emerald' : 'negative'}
+                                            showSign
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </Card>
 
-                        {/* 2. قسم "خاص محمد" */}
-                        <Card className="shadow-xs border-2 border-red-600 overflow-hidden">
-                            <div className="bg-red-600 text-white font-bold text-center py-2 text-sm flex items-center justify-center gap-1.5">
-                                <User className="h-4 w-4" />
-                                <span>قسم خاص محمد (العهدة والاستثمار)</span>
-                            </div>
+                        {/* Card 2: حساب خاص محمد */}
+                        <Card className="shadow-xs border-border">
+                            <CardHeader className="pb-3 pt-4 px-4 border-b border-border bg-muted/20">
+                                <CardTitle className="text-sm font-bold flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <User className="h-4 w-4 text-primary" />
+                                        <span>حساب خاص محمد (العهدة والاستثمار)</span>
+                                    </div>
+                                    <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">
+                                        مستثمر دائم
+                                    </Badge>
+                                </CardTitle>
+                            </CardHeader>
 
-                            <div className="divide-y divide-border text-xs">
-                                <div className="flex justify-between items-center p-2.5 bg-orange-50/50 dark:bg-orange-950/20">
+                            <div className="p-4 space-y-2.5 text-xs">
+                                <div className="flex justify-between items-center py-1">
+                                    <span className="text-muted-foreground">كاش محمد آخر جرد (الافتتاحي):</span>
                                     <MoneyDisplay amount={inventory.mohammed_opening_cash} currency="د.ع" size="sm" />
-                                    <span>كاش محمد آخر جرد</span>
                                 </div>
-                                <div className="flex justify-between items-center p-2.5 bg-orange-50/50 dark:bg-orange-950/20">
+                                <div className="flex justify-between items-center py-1">
+                                    <span className="text-muted-foreground">م/ صادر (مصروفات):</span>
                                     <MoneyDisplay amount={inventory.mohammed_outflow} currency="د.ع" size="sm" variant="negative" />
-                                    <span>م/ صادر (مصروفات)</span>
                                 </div>
-                                <div className="flex justify-between items-center p-2.5 bg-orange-50/50 dark:bg-orange-950/20">
+                                <div className="flex justify-between items-center py-1">
+                                    <span className="text-muted-foreground">م/ وارد (مقبوضات):</span>
                                     <MoneyDisplay amount={inventory.mohammed_inflow} currency="د.ع" size="sm" variant="positive" />
-                                    <span>م/ وارد (مقبوضات)</span>
                                 </div>
-                                <div className="flex justify-between items-center p-2.5 bg-orange-50/50 dark:bg-orange-950/20">
+                                <div className="flex justify-between items-center py-1">
+                                    <span className="text-muted-foreground">نثريات محمد:</span>
                                     <MoneyDisplay amount={inventory.mohammed_expenses} currency="د.ع" size="sm" variant="negative" />
-                                    <span>نثريات محمد</span>
                                 </div>
-                                <div className="flex justify-between items-center p-2.5 bg-orange-50/50 dark:bg-orange-950/20">
+                                <div className="flex justify-between items-center py-1 pb-2 border-b border-border/60">
+                                    <span className="text-muted-foreground">الموجودات التابعة:</span>
                                     <MoneyDisplay amount={inventory.mohammed_assets} currency="د.ع" size="sm" />
-                                    <span>الموجودات التابعة</span>
                                 </div>
 
-                                <div className="flex justify-between items-center p-2.5 bg-muted/60 font-semibold">
+                                <div className="flex justify-between items-center p-2 rounded-md bg-muted/40 border border-border/60">
+                                    <span className="text-muted-foreground font-semibold">الكاش المحسوب:</span>
                                     <MoneyDisplay amount={inventory.mohammed_calculated_cash} currency="د.ع" size="sm" />
-                                    <span className="text-muted-foreground">الكاش المحسوب بالمعادلة</span>
                                 </div>
 
-                                <div className="flex justify-between items-center p-2.5 bg-emerald-100/70 dark:bg-emerald-950/40 font-bold">
+                                <div className="flex justify-between items-center p-2.5 rounded-md bg-muted/20 border border-border/80">
+                                    <span className="font-bold text-foreground">الكاش الموجود فعلياً:</span>
                                     <MoneyDisplay amount={inventory.mohammed_cash_present} currency="د.ع" size="md" variant="positive" />
-                                    <span className="text-emerald-900 dark:text-emerald-200">الكاش الموجود (الفعلي)</span>
                                 </div>
 
+                                {/* شارة التطابق الذكية */}
                                 <div
-                                    className={`flex justify-between items-center p-2.5 font-bold ${
+                                    className={`p-2.5 rounded-lg border flex items-center justify-between text-xs font-bold ${
                                         Number(inventory.mohammed_difference) === 0
-                                            ? 'bg-muted/40 text-muted-foreground'
+                                            ? 'bg-muted/40 border-border text-foreground'
                                             : Number(inventory.mohammed_difference) > 0
-                                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                                            : 'bg-destructive/10 border-destructive/20 text-destructive'
                                     }`}
                                 >
+                                    <span className="flex items-center gap-1.5">
+                                        {Number(inventory.mohammed_difference) === 0 ? (
+                                            <>
+                                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                                <span>العهدة مطابقة تماماً</span>
+                                            </>
+                                        ) : Number(inventory.mohammed_difference) > 0 ? (
+                                            <>
+                                                <TrendingUp className="h-4 w-4 text-emerald-600" />
+                                                <span>زيادة نقدية في العهدة</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <AlertCircle className="h-4 w-4 text-destructive" />
+                                                <span>عجز نقدي في العهدة</span>
+                                            </>
+                                        )}
+                                    </span>
                                     <MoneyDisplay
                                         amount={inventory.mohammed_difference}
                                         currency="د.ع"
@@ -378,37 +434,11 @@ export default function InventoryShow({ inventory }: Props) {
                                         variant={Number(inventory.mohammed_difference) >= 0 ? 'positive' : 'negative'}
                                         showSign
                                     />
-                                    <span className="flex items-center gap-1.5">
-                                        {Number(inventory.mohammed_difference) === 0 ? (
-                                            <>
-                                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                                                <span>الكاش مطابق تماماً</span>
-                                            </>
-                                        ) : Number(inventory.mohammed_difference) > 0 ? (
-                                            <>
-                                                <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
-                                                <span>زيادة نقدية في العهدة</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <AlertCircle className="h-3.5 w-3.5 text-rose-600" />
-                                                <span>عجز نقدي في العهدة</span>
-                                            </>
-                                        )}
-                                    </span>
-                                </div>
-
-                                <div className="flex justify-between items-center p-2.5 bg-slate-900 text-white font-bold">
-                                    <span className="font-mono text-xs" dir="ltr">
-                                        {Number(inventory.net_worth).toLocaleString()} د.ع
-                                    </span>
-                                    <span>الموجود الكلي حالياً (مطابق للميزانية)</span>
                                 </div>
                             </div>
                         </Card>
                     </div>
                 </div>
-            </div>
-        </AuthenticatedLayout>
+            </AuthenticatedLayout>
     );
 }

@@ -7,10 +7,10 @@ import {
     StatGrid,
     DataGrid,
     Column,
-    FilterBar,
     MoneyDisplay,
 } from '@/components/common';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
     FileSpreadsheet,
@@ -286,16 +286,7 @@ export default function InventoriesIndex({ inventories, filters, stats }: Props)
                     />
                 </StatGrid>
 
-                {/* 3. Filter Bar */}
-                <FilterBar
-                    searchValue={search}
-                    onSearchChange={setSearch}
-                    onSearchSubmit={handleSearch}
-                    onReset={handleClear}
-                    searchPlaceholder="بحث في عنوان الكشف أو الملاحظات..."
-                />
-
-                {/* 4. Unified DataGrid */}
+                {/* 3. Unified DataGrid */}
                 <DataGrid<PeriodicInventoryItem>
                     title="كشوفات الجرد والميزانية السابقة"
                     description="أرشيف كامل لكافة الجرودات الدورية مع كافة المعادلات والبيانات المالية"
@@ -306,6 +297,36 @@ export default function InventoriesIndex({ inventories, filters, stats }: Props)
                     links={inventories.links}
                     renderMobileCard={renderMobileCard}
                     emptyMessage="لا توجد كشوفات جرد مسجلة حتى الآن. يمكنك بدء جرد جديد عبر الزر أعلاه."
+                    headerActions={
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                handleSearch();
+                            }}
+                            className="flex items-center gap-2"
+                        >
+                            <Input
+                                placeholder="بحث في عنوان الكشف أو الملاحظات..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="h-8 text-xs w-56 sm:w-64"
+                            />
+                            <Button type="submit" size="sm" variant="outline" className="h-8 text-xs px-2.5">
+                                بحث
+                            </Button>
+                            {search && (
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={handleClear}
+                                    className="h-8 text-xs px-2 text-muted-foreground"
+                                >
+                                    إلغاء
+                                </Button>
+                            )}
+                        </form>
+                    }
                 />
             </div>
         </AuthenticatedLayout>

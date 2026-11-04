@@ -244,3 +244,4 @@ class PeriodicInventoryController extends Controller
         return $clean;
     }
 }
+
