@@ -24,6 +24,17 @@ class TreasurySystemTest extends TestCase
         $this->seed(DatabaseSeeder::class);
         $this->admin = User::where('role', 'admin')->first();
         $this->service = app(TreasuryService::class);
+
+        // Ensure a bank exists for transfer tests
+        Bank::firstOrCreate(
+            ['account_number' => 'ACC-TEST-001'],
+            [
+                'name' => 'مصرف بغداد',
+                'currency' => 'IQD',
+                'balance' => 5000000.00,
+                'status' => 'active',
+            ]
+        );
     }
 
     public function test_treasury_page_can_be_rendered(): void

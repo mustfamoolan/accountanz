@@ -15,6 +15,25 @@ class AuthenticationTest extends TestCase
     {
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
+
+        // Ensure users exist for all roles in testing
+        User::firstOrCreate(
+            ['username' => 'accountant'],
+            [
+                'name' => 'علي المحاسب',
+                'password' => \Illuminate\Support\Facades\Hash::make('password'),
+                'role' => 'accountant',
+            ]
+        );
+
+        User::firstOrCreate(
+            ['username' => 'investor'],
+            [
+                'name' => 'أحمد المستثمر',
+                'password' => \Illuminate\Support\Facades\Hash::make('password'),
+                'role' => 'investor',
+            ]
+        );
     }
 
     public function test_login_screen_can_be_rendered(): void
