@@ -43,7 +43,7 @@ export default function Login({ status }: { status?: string }) {
                         <Building2 className="h-6 w-6" />
                     </div>
                     <div className="text-center">
-                        <h1 className="text-2xl font-bold tracking-tight text-foreground">نظام زوبيدي المحاسبي</h1>
+                        <h1 className="text-2xl font-bold tracking-tight text-foreground">نظام الزبيدي المحاسبي</h1>
                         <p className="text-sm text-muted-foreground mt-1">منظومة الإدارة المالية والمحاسبية المتكاملة</p>
                     </div>
                 </div>
@@ -170,7 +170,7 @@ export default function Login({ status }: { status?: string }) {
 
                 {/* Footer note */}
                 <div className="mt-6 text-center text-xs text-muted-foreground">
-                    &copy; 2026 ZUPIDY ERP &bull; نظام إدارة الصلاحيات والمستخدمين
+                    &copy; 2026 ZUPIDY ERP &bull; نظام إدارة
                 </div>
             </div>
         </>
