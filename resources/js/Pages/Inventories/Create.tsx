@@ -1,5 +1,5 @@
 import { useState, useMemo, FormEventHandler } from 'react';
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { PageHeader, MoneyDisplay } from '@/components/common';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -92,7 +92,7 @@ export default function InventoryCreate({
         Array.from({ length: 10 }, () => createEmptyRow())
     );
 
-    const { data, setData, post, processing, errors } = useForm({
+    const [formData, setFormData] = useState({
         title: `جرد وميزانية بتاريخ ${new Date().toISOString().split('T')[0]}`,
         inventory_date: new Date().toISOString().split('T')[0],
         actual_cash: String(systemActualCash || 0),
@@ -106,6 +106,12 @@ export default function InventoryCreate({
         mohammed_cash_present: '0',
         notes: '',
     });
+
+    const [processing, setProcessing] = useState(false);
+
+    const setData = (field: string, value: string) => {
+        setFormData((prev) => ({ ...prev, [field]: value }));
+    };
 
     // Row management
     const addRows = (count: number = 5) => {
