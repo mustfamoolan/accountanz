@@ -23,6 +23,7 @@ class Investor extends Model
         'total_withdrawn_profits',
         'profit_rate',
         'status',
+        'is_permanent',
         'notes',
     ];
 
@@ -34,6 +35,7 @@ class Investor extends Model
             'total_withdrawn_capital' => 'decimal:2',
             'total_withdrawn_profits' => 'decimal:2',
             'profit_rate' => 'decimal:2',
+            'is_permanent' => 'boolean',
         ];
     }
 
@@ -45,6 +47,11 @@ class Investor extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(TreasuryTransaction::class)->latest('transaction_date');
+    }
+
+    public function invoicePurchases(): HasMany
+    {
+        return $this->hasMany(InvoiceSaleItem::class)->latest('created_at');
     }
 
     /**

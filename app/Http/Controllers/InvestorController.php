@@ -102,12 +102,19 @@ class InvestorController extends Controller
             ->latest('transaction_date')
             ->paginate(20);
 
+        // Load purchased invoices / sales for this investor
+        $invoicePurchases = \App\Models\InvoiceSaleItem::where('investor_id', $investor->id)
+            ->with(['sale.invoice'])
+            ->latest('created_at')
+            ->get();
+
         $funds = Fund::orderBy('name')->get();
         $banks = Bank::orderBy('name')->get();
 
         return Inertia::render('Investors/Show', [
             'investor' => $investor,
             'transactions' => $transactions,
+            'invoicePurchases' => $invoicePurchases,
             'funds' => $funds,
             'banks' => $banks,
         ]);
@@ -227,6 +234,21 @@ class InvestorController extends Controller
         } catch (Exception $e) {
             return back()->with('error', $e->getMessage());
         }
+    }
+
+    public function destroy(Investor $investor)
+    {
+        if ($investor->is_permanent) {
+            return back()->with('error', 'لا يمكن حذف المستثمر (محمد) لأنه مستثمر نظام ثابت ومرتبط بحسابات الجرد والميزانية.');
+        }
+
+        if ($investor->capital_balance > 0 || $investor->profit_balance > 0) {
+            return back()->with('error', 'لا يمكن حذف مستثمر لديه رصيد رأس مال أو أرباح نشطة.');
+        }
+
+        $investor->delete();
+
+        return redirect()->route('investors.index')->with('success', 'تم حذف المستثمر بنجاح.');
     }
 }
 

@@ -35,6 +35,9 @@ import {
     PlusCircle,
     MinusCircle,
     AlertCircle,
+    Receipt,
+    ShoppingCart,
+    ExternalLink,
 } from 'lucide-react';
 
 interface Investor {
@@ -78,6 +81,37 @@ interface Transaction {
     creator?: { name: string };
 }
 
+interface InvoicePurchaseItem {
+    id: number;
+    invoice_sale_id: number;
+    investor_id: number;
+    amount_usd: number | string;
+    exchange_rate: number | string;
+    amount_iqd: number | string;
+    customs_percentage: number | string;
+    customs_amount_usd: number | string;
+    amount_after_customs_usd: number | string;
+    customs_exchange_rate: number | string;
+    customs_amount_iqd: number | string;
+    amount_after_customs_iqd: number | string;
+    notes?: string;
+    created_at: string;
+    sale?: {
+        id: number;
+        invoice_id: number;
+        sale_number: string;
+        sale_date: string;
+        invoice?: {
+            id: number;
+            invoice_number: string;
+            date: string;
+            total_amount_usd: number | string;
+            exchange_rate: number | string;
+            status: string;
+        };
+    };
+}
+
 interface Props {
     investor: Investor;
     transactions: {
@@ -85,11 +119,12 @@ interface Props {
         links: any[];
         total: number;
     };
+    invoicePurchases?: InvoicePurchaseItem[];
     funds: Fund[];
     banks: Bank[];
 }
 
-export default function InvestorShow({ investor, transactions, funds, banks }: Props) {
+export default function InvestorShow({ investor, transactions, invoicePurchases = [], funds, banks }: Props) {
     // 4 Modals
     const [depositCapitalOpen, setDepositCapitalOpen] = useState(false);
     const [withdrawCapitalOpen, setWithdrawCapitalOpen] = useState(false);
@@ -241,6 +276,149 @@ export default function InvestorShow({ investor, transactions, funds, banks }: P
         </div>
     );
 
+    // Columns for Invoice Purchases by this Investor
+    const purchaseColumns: Column<InvoicePurchaseItem>[] = [
+        {
+            header: 'رقم الفاتورة',
+            cell: (item) => (
+                <div className="flex flex-col gap-0.5">
+                    <Link
+                        href={`/invoices/${item.sale?.invoice?.id}`}
+                        className="font-mono font-bold text-primary hover:underline flex items-center gap-1"
+                    >
+                        <span>{item.sale?.invoice?.invoice_number || `فاتورة #${item.sale?.invoice_id}`}</span>
+                        <ExternalLink className="h-3 w-3" />
+                    </Link>
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                        بيع #{item.sale?.sale_number}
+                    </span>
+                </div>
+            ),
+        },
+        {
+            header: 'المبلغ بالدولار',
+            align: 'left',
+            cell: (item) => (
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    ${Number(item.amount_usd).toLocaleString()}
+                </span>
+            ),
+        },
+        {
+            header: 'سعر الصرف',
+            align: 'center',
+            cell: (item) => (
+                <span className="font-mono text-xs text-muted-foreground">
+                    {Number(item.exchange_rate).toLocaleString()}
+                </span>
+            ),
+        },
+        {
+            header: 'الكمرك',
+            align: 'center',
+            cell: (item) => (
+                <div className="flex flex-col items-center gap-0.5">
+                    <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-300">
+                        {Number(item.customs_percentage)}%
+                    </Badge>
+                    <span className="text-[10px] font-mono text-muted-foreground">
+                        {Number(item.customs_amount_iqd).toLocaleString()} د.ع
+                    </span>
+                </div>
+            ),
+        },
+        {
+            header: 'إجمالي المستحق بالدينار',
+            align: 'left',
+            cell: (item) => (
+                <MoneyDisplay
+                    amount={item.amount_after_customs_iqd || item.amount_iqd}
+                    currency="IQD"
+                    size="sm"
+                    variant="default"
+                />
+            ),
+        },
+        {
+            header: 'تاريخ البيع',
+            align: 'center',
+            cell: (item) => (
+                <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap" dir="ltr">
+                    {item.sale?.sale_date || (item.created_at ? new Date(item.created_at).toLocaleDateString('ar-IQ') : '—')}
+                </span>
+            ),
+        },
+        {
+            header: 'إجراءات',
+            align: 'center',
+            cell: (item) => (
+                item.sale?.invoice?.id ? (
+                    <Button asChild size="sm" variant="ghost" className="h-7 text-xs gap-1">
+                        <Link href={`/invoices/${item.sale?.invoice?.id}`}>
+                            <span>عرض الفاتورة</span>
+                            <ArrowLeft className="h-3 w-3" />
+                        </Link>
+                    </Button>
+                ) : null
+            ),
+        },
+    ];
+
+    const renderMobilePurchaseCard = (item: InvoicePurchaseItem) => (
+        <div className="space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+                <Link
+                    href={`/invoices/${item.sale?.invoice?.id}`}
+                    className="font-mono font-bold text-primary flex items-center gap-1 hover:underline"
+                >
+                    <span>{item.sale?.invoice?.invoice_number || `فاتورة #${item.sale?.invoice_id}`}</span>
+                    <ExternalLink className="h-3 w-3" />
+                </Link>
+                <span className="text-[10px] font-mono text-muted-foreground">
+                    بيع #{item.sale?.sale_number}
+                </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 p-2 bg-muted/40 rounded border border-border/50 text-[11px]">
+                <div>
+                    <span className="text-muted-foreground block text-[10px]">الكمية المباعة:</span>
+                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        ${Number(item.amount_usd).toLocaleString()}
+                    </span>
+                </div>
+                <div>
+                    <span className="text-muted-foreground block text-[10px]">سعر الصرف:</span>
+                    <span className="font-mono font-semibold">{Number(item.exchange_rate).toLocaleString()}</span>
+                </div>
+                <div>
+                    <span className="text-muted-foreground block text-[10px]">الكمرك ({Number(item.customs_percentage)}%):</span>
+                    <span className="font-mono text-amber-600">{Number(item.customs_amount_iqd).toLocaleString()} د.ع</span>
+                </div>
+                <div>
+                    <span className="text-muted-foreground block text-[10px]">المجموع المستحق:</span>
+                    <span className="font-mono font-bold text-primary">
+                        {Number(item.amount_after_customs_iqd || item.amount_iqd).toLocaleString()} د.ع
+                    </span>
+                </div>
+            </div>
+
+            <div className="flex justify-between items-center text-[10px] text-muted-foreground pt-1 border-t border-border/50">
+                <span dir="ltr">{item.sale?.sale_date || '—'}</span>
+                {item.sale?.invoice?.id && (
+                    <Button asChild size="sm" variant="outline" className="h-6 text-[10px] px-2 gap-1">
+                        <Link href={`/invoices/${item.sale?.invoice?.id}`}>
+                            <span>عرض الفاتورة</span>
+                            <ArrowLeft className="h-3 w-3" />
+                        </Link>
+                    </Button>
+                )}
+            </div>
+        </div>
+    );
+
+    const totalPurchasedUsd = invoicePurchases.reduce((acc, item) => acc + Number(item.amount_usd || 0), 0);
+    const totalPurchasedIqd = invoicePurchases.reduce((acc, item) => acc + Number(item.amount_after_customs_iqd || item.amount_iqd || 0), 0);
+
     return (
         <AuthenticatedLayout header={`كشف حساب المستثمر: ${investor.name}`} activeNav="investors">
             <Head title={`المستثمر: ${investor.name}`} />
@@ -372,7 +550,28 @@ export default function InvestorShow({ investor, transactions, funds, banks }: P
                     />
                 </div>
 
-                {/* 3. Unified DataGrid for Ledger */}
+                {/* 3. Dedicated DataGrid for Investor's Invoice Purchases */}
+                <DataGrid<InvoicePurchaseItem>
+                    title="سجل مشتريات المستثمر من الفواتير (الفواتير المباعة له)"
+                    description="قائمة بجميع حصص ومبالغ الفواتير التي تم بيعها لهذا المستثمر مع تفاصيل العملة والكمارك وتكاليفها"
+                    icon={ShoppingCart}
+                    columns={purchaseColumns}
+                    data={invoicePurchases}
+                    total={invoicePurchases.length}
+                    renderMobileCard={renderMobilePurchaseCard}
+                    emptyMessage="لا توجد فواتير تم بيعها لهذا المستثمر حتى الآن."
+                    headerActions={
+                        invoicePurchases.length > 0 ? (
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs bg-muted/60 px-3 py-1.5 rounded-lg border border-border">
+                                <span>إجمالي الدولار: <strong className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">${totalPurchasedUsd.toLocaleString()}</strong></span>
+                                <span className="text-muted-foreground hidden sm:inline">|</span>
+                                <span>إجمالي المستحق: <strong className="font-mono text-primary font-bold">{totalPurchasedIqd.toLocaleString()} د.ع</strong></span>
+                            </div>
+                        ) : undefined
+                    }
+                />
+
+                {/* 4. Unified DataGrid for Ledger */}
                 <DataGrid<Transaction>
                     title={`سجل العمليات المالية والتدفقات الخاصة بالمستثمر`}
                     description="كشف حساب تفصيلي بجميع إيداعات رأس المال، إثبات الأرباح، والمسحوبات النقدية"

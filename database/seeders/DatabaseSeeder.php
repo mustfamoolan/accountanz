@@ -154,6 +154,24 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        // 6. Permanent Investor "محمد" for Balance Sheet & Special Account
+        $mohammed = Investor::updateOrCreate(
+            ['code' => 'INV-MOHAMMED'],
+            [
+                'name' => 'محمد',
+                'phone' => '07700000001',
+                'currency' => 'IQD',
+                'capital_balance' => 0.00,
+                'profit_balance' => 0.00,
+                'total_withdrawn_capital' => 0.00,
+                'total_withdrawn_profits' => 0.00,
+                'profit_rate' => 25.00,
+                'status' => 'active',
+                'is_permanent' => true,
+                'notes' => 'مستثمر النظام الثابت - مرتبط بكشوفات الجرد والميزانية وحساب (خاص محمد)',
+            ]
+        );
+
         // Inject initial investor capital and profits if not yet set
         if ($inv1->capital_balance == 0) {
             $service->investorDepositCapital($inv1, $mainFund, 20000000, 'إيداع رأس مال تأسيسي للحاج مصطفى نقداً', $admin->id);
@@ -168,6 +186,11 @@ class DatabaseSeeder extends Seeder
         if ($inv3->capital_balance == 0) {
             $service->investorDepositCapital($inv3, $baghdadBank, 10000000, 'إيداع رأس مال أحمد المستثمر عبر مصرف بغداد', $admin->id);
             $service->investorDistributeProfit($inv3, 950000, 'أرباح استثمارية عن شهر تشرين الأول', $admin->id);
+        }
+
+        if ($mohammed->capital_balance == 0) {
+            $service->investorDepositCapital($mohammed, $mainFund, 30000000, 'إيداع رأس مال تأسيسي للمستثمر محمد (خاص محمد)', $admin->id);
+            $service->investorDistributeProfit($mohammed, 4000000, 'أرباح استثمارية دورية للمستثمر محمد', $admin->id);
         }
     }
 }

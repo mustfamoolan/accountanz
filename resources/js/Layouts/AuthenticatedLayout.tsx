@@ -104,6 +104,13 @@ export default function AuthenticatedLayout({ children, header, activeNav = 'das
             roles: ['admin', 'accountant'],
         },
         {
+            key: 'inventories',
+            label: 'الجرد والميزانية',
+            href: '/inventories',
+            icon: FileSpreadsheet,
+            roles: ['admin', 'accountant'],
+        },
+        {
             key: 'investors',
             label: 'المستثمرين ورؤوس الأموال',
             href: '/investors',

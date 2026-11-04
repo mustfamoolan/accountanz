@@ -5,7 +5,7 @@ interface MoneyDisplayProps {
     amount: number | string;
     currency?: string;
     size?: 'sm' | 'md' | 'lg' | 'xl';
-    variant?: 'default' | 'positive' | 'negative' | 'purple' | 'blue';
+    variant?: 'default' | 'positive' | 'negative' | 'purple' | 'blue' | 'emerald' | 'muted';
     className?: string;
     showSign?: boolean;
 }
@@ -35,9 +35,11 @@ export function MoneyDisplay({
     const variantClasses = {
         default: 'text-foreground',
         positive: 'text-emerald-600 dark:text-emerald-400',
+        emerald: 'text-emerald-600 dark:text-emerald-400',
         negative: 'text-rose-600 dark:text-rose-400',
         purple: 'text-purple-600 dark:text-purple-400',
         blue: 'text-blue-600 dark:text-blue-400',
+        muted: 'text-muted-foreground',
     }[variant];
 
     return (

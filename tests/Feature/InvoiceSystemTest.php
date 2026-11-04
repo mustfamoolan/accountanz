@@ -128,7 +128,7 @@ class InvoiceSystemTest extends TestCase
 
         $fundBalanceBefore = (float) $this->mainFundIqd->balance;
 
-        // Sell 10,000 $ @ 1,530 = 15,300,000 IQD
+        // Sell 10,000 $ @ 1,530 = 15,300,000 IQD to Investor A
         // Profit = 15,300,000 - 15,000,000 = 300,000 IQD
         // Investor A gets 60% = 180,000 IQD
         // Investor B gets 40% = 120,000 IQD
@@ -136,12 +136,13 @@ class InvoiceSystemTest extends TestCase
             'sale_date' => now()->toDateString(),
             'payment_destination_type' => 'fund',
             'payment_destination_id' => $this->mainFundIqd->id,
-            'customers' => [
+            'investors' => [
                 [
-                    'customer_id' => $customer->id,
+                    'investor_id' => $invA->id,
                     'amount_usd' => 10000,
                     'exchange_rate' => 1530,
                     'customs_percentage' => 0,
+                    'customs_exchange_rate' => 1530,
                 ],
             ],
         ]);
@@ -170,6 +171,21 @@ class InvoiceSystemTest extends TestCase
             'profit_amount' => 120000.00,
             'share_percentage' => 40.00,
         ]);
+
+        // 5. Invoice Sale Item is linked to Investor A
+        $this->assertDatabaseHas('invoice_sale_items', [
+            'investor_id' => $invA->id,
+            'amount_usd' => 10000.00,
+            'exchange_rate' => 1530.00,
+        ]);
+
+        // 6. Investor show page displays purchases
+        $showResponse = $this->get("/investors/{$invA->id}");
+        $showResponse->assertOk();
+        $showResponse->assertInertia(fn ($page) => $page
+            ->component('Investors/Show')
+            ->has('invoicePurchases', 1)
+        );
     }
 
     public function test_can_create_new_fund_with_currency()

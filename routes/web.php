@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BankController;
 use App\Http\Controllers\InvestorController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\PeriodicInventoryController;
 use App\Http\Controllers\TreasuryController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -65,9 +66,11 @@ Route::middleware('auth')->group(function () {
 
     // Invoices & Sales Management
     Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+    Route::get('/invoices/create', [InvoiceController::class, 'create'])->name('invoices.create');
     Route::post('/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
     Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
-    Route::post('/invoices/{invoice}/sell', [InvoiceController::class, 'sell'])->name('invoices.sell');
+    Route::get('/invoices/{invoice}/sell', [InvoiceController::class, 'sellForm'])->name('invoices.sell');
+    Route::post('/invoices/{invoice}/sell', [InvoiceController::class, 'sell'])->name('invoices.sell.submit');
     Route::post('/customers', [InvoiceController::class, 'storeCustomer'])->name('customers.store');
 
     // Investors Management
@@ -75,8 +78,16 @@ Route::middleware('auth')->group(function () {
     Route::post('/investors', [InvestorController::class, 'store'])->name('investors.store');
     Route::get('/investors/{investor}', [InvestorController::class, 'show'])->name('investors.show');
     Route::put('/investors/{investor}', [InvestorController::class, 'update'])->name('investors.update');
+    Route::delete('/investors/{investor}', [InvestorController::class, 'destroy'])->name('investors.destroy');
     Route::post('/investors/{investor}/deposit-capital', [InvestorController::class, 'depositCapital'])->name('investors.deposit-capital');
     Route::post('/investors/{investor}/withdraw-capital', [InvestorController::class, 'withdrawCapital'])->name('investors.withdraw-capital');
     Route::post('/investors/{investor}/distribute-profit', [InvestorController::class, 'distributeProfit'])->name('investors.distribute-profit');
     Route::post('/investors/{investor}/withdraw-profit', [InvestorController::class, 'withdrawProfit'])->name('investors.withdraw-profit');
+
+    // Periodic Inventories & Balance Sheet (الجرد والميزانية)
+    Route::get('/inventories', [PeriodicInventoryController::class, 'index'])->name('inventories.index');
+    Route::get('/inventories/create', [PeriodicInventoryController::class, 'create'])->name('inventories.create');
+    Route::post('/inventories', [PeriodicInventoryController::class, 'store'])->name('inventories.store');
+    Route::get('/inventories/{inventory}', [PeriodicInventoryController::class, 'show'])->name('inventories.show');
+    Route::delete('/inventories/{inventory}', [PeriodicInventoryController::class, 'destroy'])->name('inventories.destroy');
 });

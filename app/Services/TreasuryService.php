@@ -437,7 +437,7 @@ class TreasuryService
     }
 
     /**
-     * Sell Invoice to Customers and Distribute Profits to Investors
+     * Sell Invoice to Investors and Distribute Profits
      */
     public function sellInvoice(Invoice $invoice, array $data, ?int $userId = null): InvoiceSale
     {
@@ -447,15 +447,25 @@ class TreasuryService
             $soldBefore = (float) $lockedInvoice->sales()->sum('total_amount_usd');
             $availableUsd = (float) $lockedInvoice->amount_usd - $soldBefore;
 
-            $customers = $data['customers']; // array of items: [customer_id, amount_usd, exchange_rate, customs_percentage, notes]
+            $items = $data['investors'] ?? $data['customers'] ?? [];
             $totalSaleUsd = 0;
             $totalSaleIqd = 0;
 
-            foreach ($customers as $c) {
-                $cUsd = (float) $c['amount_usd'];
-                $cRate = (float) $c['exchange_rate'];
+            foreach ($items as $item) {
+                $cUsd = (float) $item['amount_usd'];
+                $cRate = (float) $item['exchange_rate'];
+                $customsPct = isset($item['customs_percentage']) ? (float) $item['customs_percentage'] : 0.0;
+                $customsRate = isset($item['customs_exchange_rate']) && (float) $item['customs_exchange_rate'] > 0
+                    ? (float) $item['customs_exchange_rate']
+                    : $cRate;
+
+                $amountIqd = $cUsd * $cRate;
+                $customsAmountUsd = $cUsd * ($customsPct / 100);
+                $customsAmountIqd = $customsAmountUsd * $customsRate;
+                $totalFinalIqd = $amountIqd + $customsAmountIqd;
+
                 $totalSaleUsd += $cUsd;
-                $totalSaleIqd += ($cUsd * $cRate);
+                $totalSaleIqd += $totalFinalIqd;
             }
 
             if ($totalSaleUsd > ($availableUsd + 0.001)) {
@@ -484,17 +494,35 @@ class TreasuryService
                 'created_by' => $userId ?? auth()->id(),
             ]);
 
-            // Save sale items
-            foreach ($customers as $item) {
+            // Save sale items per investor
+            foreach ($items as $item) {
                 $itemUsd = (float) $item['amount_usd'];
                 $itemRate = (float) $item['exchange_rate'];
+                $customsPct = isset($item['customs_percentage']) ? (float) $item['customs_percentage'] : 0.0;
+                $customsRate = isset($item['customs_exchange_rate']) && (float) $item['customs_exchange_rate'] > 0
+                    ? (float) $item['customs_exchange_rate']
+                    : $itemRate;
+
+                $amountIqd = $itemUsd * $itemRate;
+                $customsAmountUsd = $itemUsd * ($customsPct / 100);
+                $amountAfterCustomsUsd = $itemUsd + $customsAmountUsd;
+                $customsAmountIqd = $customsAmountUsd * $customsRate;
+                $amountAfterCustomsIqd = $amountIqd + $customsAmountIqd;
+
+                $investorId = $item['investor_id'] ?? $item['customer_id'] ?? null;
+
                 InvoiceSaleItem::create([
                     'invoice_sale_id' => $sale->id,
-                    'customer_id' => $item['customer_id'],
+                    'investor_id' => $investorId,
+                    'customer_id' => null,
                     'amount_usd' => $itemUsd,
                     'exchange_rate' => $itemRate,
-                    'amount_iqd' => $itemUsd * $itemRate,
-                    'customs_percentage' => $item['customs_percentage'] ?? 0,
+                    'amount_iqd' => $amountIqd,
+                    'customs_percentage' => $customsPct,
+                    'amount_after_customs_usd' => $amountAfterCustomsUsd,
+                    'customs_exchange_rate' => $customsRate,
+                    'customs_amount_iqd' => $customsAmountIqd,
+                    'amount_after_customs_iqd' => $amountAfterCustomsIqd,
                     'notes' => $item['notes'] ?? null,
                 ]);
             }
