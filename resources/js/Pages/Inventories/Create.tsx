@@ -144,9 +144,9 @@ export default function InventoryCreate({
             totalExpenses += parseFloat(r.expense_amount) || 0;
         });
 
-        const actualCash = parseFloat(data.actual_cash) || 0;
-        const bankBalance = parseFloat(data.bank_balance) || 0;
-        const prevNetWorth = parseFloat(data.previous_net_worth) || 0;
+        const actualCash = parseFloat(formData.actual_cash) || 0;
+        const bankBalance = parseFloat(formData.bank_balance) || 0;
+        const prevNetWorth = parseFloat(formData.previous_net_worth) || 0;
 
         // 1. م/ الموجودات = كاش حقيقي + رصيد مصارف + نطلب
         const totalAssets = actualCash + bankBalance + totalReceivables;
@@ -161,12 +161,12 @@ export default function InventoryCreate({
         const inventoryProfit = netWorth - prevNetWorth;
 
         // 5. قسم خاص محمد:
-        const mohOpening = parseFloat(data.mohammed_opening_cash) || 0;
-        const mohOutflow = parseFloat(data.mohammed_outflow) || 0;
-        const mohInflow = parseFloat(data.mohammed_inflow) || 0;
-        const mohExpenses = parseFloat(data.mohammed_expenses) || 0;
-        const mohAssets = parseFloat(data.mohammed_assets) || 0;
-        const mohCashPresent = parseFloat(data.mohammed_cash_present) || 0;
+        const mohOpening = parseFloat(formData.mohammed_opening_cash) || 0;
+        const mohOutflow = parseFloat(formData.mohammed_outflow) || 0;
+        const mohInflow = parseFloat(formData.mohammed_inflow) || 0;
+        const mohExpenses = parseFloat(formData.mohammed_expenses) || 0;
+        const mohAssets = parseFloat(formData.mohammed_assets) || 0;
+        const mohCashPresent = parseFloat(formData.mohammed_cash_present) || 0;
 
         // كاش محسوب = افتتاح + وارد - صادر - نثريات
         const mohCalculatedCash = (mohOpening + mohInflow) - (mohOutflow + mohExpenses);
@@ -192,26 +192,34 @@ export default function InventoryCreate({
             mohCalculatedCash,
             mohDifference,
         };
-    }, [rows, data]);
+    }, [rows, formData]);
 
     const handleSubmit: FormEventHandler = (e) => {
         e.preventDefault();
+        setProcessing(true);
 
         // Transform dynamic rows to controller format
-        const receivables = rows.map((r) => ({ amount: r.receivable_amount, details: r.receivable_details }));
-        const payables = rows.map((r) => ({ amount: r.payable_amount, details: r.payable_details }));
-        const customs = rows.map((r) => ({ amount: r.custom_amount, details: r.custom_details }));
-        const expenses = rows.map((r) => ({ amount: r.expense_amount, details: r.expense_details }));
+        const receivables = rows
+            .filter((r) => r.receivable_amount || r.receivable_details)
+            .map((r) => ({ amount: r.receivable_amount, details: r.receivable_details }));
+        const payables = rows
+            .filter((r) => r.payable_amount || r.payable_details)
+            .map((r) => ({ amount: r.payable_amount, details: r.payable_details }));
+        const customs = rows
+            .filter((r) => r.custom_amount || r.custom_details)
+            .map((r) => ({ amount: r.custom_amount, details: r.custom_details }));
+        const expenses = rows
+            .filter((r) => r.expense_amount || r.expense_details)
+            .map((r) => ({ amount: r.expense_amount, details: r.expense_details }));
 
-        post('/inventories', {
-            // @ts-ignore
-            data: {
-                ...data,
-                receivables,
-                payables,
-                customs,
-                expenses,
-            },
+        router.post('/inventories', {
+            ...formData,
+            receivables,
+            payables,
+            customs,
+            expenses,
+        }, {
+            onFinish: () => setProcessing(false),
         });
     };
 
@@ -254,7 +262,7 @@ export default function InventoryCreate({
                                 <Label htmlFor="title" className="text-xs font-semibold">عنوان كشف الجرد</Label>
                                 <Input
                                     id="title"
-                                    value={data.title}
+                                    value={formData.title}
                                     onChange={(e) => setData('title', e.target.value)}
                                     className="h-9 text-xs"
                                     placeholder="جرد شهر تشرين الأول..."
@@ -267,7 +275,7 @@ export default function InventoryCreate({
                                 <Input
                                     id="inventory_date"
                                     type="date"
-                                    value={data.inventory_date}
+                                    value={formData.inventory_date}
                                     onChange={(e) => setData('inventory_date', e.target.value)}
                                     className="h-9 text-xs"
                                     required
@@ -277,7 +285,7 @@ export default function InventoryCreate({
                                 <Label htmlFor="notes" className="text-xs font-semibold">ملاحظات الكشف</Label>
                                 <Input
                                     id="notes"
-                                    value={data.notes}
+                                    value={formData.notes}
                                     onChange={(e) => setData('notes', e.target.value)}
                                     className="h-9 text-xs"
                                     placeholder="أي ملاحظات تتعلق بظروف الجرد أو المطابقات"

@@ -120,51 +120,6 @@ export default function Login({ status }: { status?: string }) {
                         </form>
 
                         {/* Fast Role Selection for Testing */}
-                        <div className="mt-6 pt-4 border-t border-border/70 text-right space-y-2">
-                            <p className="text-[11px] font-semibold text-muted-foreground">
-                                حسابات تجريبية للاختبار السريع (اضغط للتعبئة):
-                            </p>
-                            <div className="grid grid-cols-3 gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => fillRole('admin')}
-                                    className="p-2 border border-border rounded-lg text-center hover:bg-muted/70 transition-colors cursor-pointer group"
-                                >
-                                    <div className="flex items-center justify-center mb-1 text-primary">
-                                        <Shield className="h-4 w-4" />
-                                    </div>
-                                    <div className="text-xs font-bold">أدمن</div>
-                                    <div className="text-[10px] text-muted-foreground font-mono">admin</div>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => fillRole('accountant')}
-                                    className="p-2 border border-border rounded-lg text-center hover:bg-muted/70 transition-colors cursor-pointer group"
-                                >
-                                    <div className="flex items-center justify-center mb-1 text-emerald-600">
-                                        <Calculator className="h-4 w-4" />
-                                    </div>
-                                    <div className="text-xs font-bold">محاسب</div>
-                                    <div className="text-[10px] text-muted-foreground font-mono">accountant</div>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => fillRole('investor')}
-                                    className="p-2 border border-border rounded-lg text-center hover:bg-muted/70 transition-colors cursor-pointer group"
-                                >
-                                    <div className="flex items-center justify-center mb-1 text-indigo-600">
-                                        <TrendingUp className="h-4 w-4" />
-                                    </div>
-                                    <div className="text-xs font-bold">مستثمر</div>
-                                    <div className="text-[10px] text-muted-foreground font-mono">investor</div>
-                                </button>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground text-center pt-1 font-mono">
-                                كلمة المرور لجميع الحسابات: password
-                            </p>
-                        </div>
                     </CardContent>
                 </Card>
 
