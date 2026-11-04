@@ -170,3 +170,4 @@ class InvoiceController extends Controller
         return redirect()->back()->with('success', "تم إضافة العميل [{$customer->name}] بنجاح.");
     }
 }
+

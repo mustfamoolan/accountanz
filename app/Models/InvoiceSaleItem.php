@@ -36,3 +36,4 @@ class InvoiceSaleItem extends Model
         return $this->belongsTo(Customer::class);
     }
 }
+

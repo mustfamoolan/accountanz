@@ -678,3 +678,4 @@ export default function InvoiceShow({ invoice, funds, banks, customers }: Props)
         </AuthenticatedLayout>
     );
 }
+

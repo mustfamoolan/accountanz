@@ -1145,3 +1145,4 @@ export default function InvoicesIndex({
         </AuthenticatedLayout>
     );
 }
+

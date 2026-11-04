@@ -66,3 +66,4 @@ class Invoice extends Model
         return (float) $this->sales()->sum('profit_iqd');
     }
 }
+

@@ -704,6 +704,115 @@ export default function TreasuryIndex({
                     </form>
                 </DialogContent>
             </Dialog>
+
+            {/* Modal: Create New Fund (IQD or USD) */}
+            <Dialog open={createFundOpen} onOpenChange={setCreateFundOpen}>
+                <DialogContent className="sm:max-w-md" dir="rtl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <PlusCircle className="h-5 w-5 text-primary" />
+                            <span>إضافة صندوق نقدي جديد (خزينة)</span>
+                        </DialogTitle>
+                        <DialogDescription className="text-xs">
+                            حدد اسم الصندوق وعملته (دينار عراقي أو دولار أمريكي) ونوعه
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleCreateFund} className="space-y-3.5">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="fund-name" className="text-xs font-semibold">
+                                اسم الصندوق <span className="text-destructive">*</span>
+                            </Label>
+                            <Input
+                                id="fund-name"
+                                placeholder="مثال: قاصة الدولار للفرع / صندوق المصاريف النثرية"
+                                value={createFundForm.data.name}
+                                onChange={(e) => createFundForm.setData('name', e.target.value)}
+                                required
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="fund-code" className="text-xs font-semibold">
+                                    كود الصندوق <span className="text-destructive">*</span>
+                                </Label>
+                                <Input
+                                    id="fund-code"
+                                    placeholder="FUND-USD-01"
+                                    dir="ltr"
+                                    className="font-mono text-xs uppercase"
+                                    value={createFundForm.data.code}
+                                    onChange={(e) => createFundForm.setData('code', e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold">العملة المعتمدة</Label>
+                                <select
+                                    className="w-full text-xs rounded-md border border-input bg-background p-2"
+                                    value={createFundForm.data.currency}
+                                    onChange={(e) => createFundForm.setData('currency', e.target.value)}
+                                >
+                                    <option value="IQD">دينار عراقي (IQD)</option>
+                                    <option value="USD">دولار أمريكي (USD $)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold">نوع الصندوق</Label>
+                                <select
+                                    className="w-full text-xs rounded-md border border-input bg-background p-2"
+                                    value={createFundForm.data.type}
+                                    onChange={(e) => createFundForm.setData('type', e.target.value as any)}
+                                >
+                                    <option value="sub">صندوق فرعي</option>
+                                    <option value="main">صندوق رئيسي</option>
+                                    <option value="petty_cash">مصاريف نثرية</option>
+                                </select>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label htmlFor="fund-bal" className="text-xs font-semibold">
+                                    الرصيد الافتتاحي
+                                </Label>
+                                <Input
+                                    id="fund-bal"
+                                    type="number"
+                                    step="any"
+                                    placeholder="0"
+                                    dir="ltr"
+                                    className="font-mono text-xs"
+                                    value={createFundForm.data.initial_balance}
+                                    onChange={(e) => createFundForm.setData('initial_balance', e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="fund-notes" className="text-xs font-semibold">ملاحظات</Label>
+                            <Input
+                                id="fund-notes"
+                                placeholder="ملاحظات حول موقع أو أمين الصندوق"
+                                value={createFundForm.data.notes}
+                                onChange={(e) => createFundForm.setData('notes', e.target.value)}
+                            />
+                        </div>
+
+                        <DialogFooter className="gap-2 sm:gap-0 pt-2">
+                            <Button type="button" variant="outline" onClick={() => setCreateFundOpen(false)}>
+                                إلغاء
+                            </Button>
+                            <Button type="submit" disabled={createFundForm.processing}>
+                                {createFundForm.processing ? 'جاري الإنشاء...' : 'حفظ الصندوق'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </AuthenticatedLayout>
     );
 }

@@ -37,3 +37,4 @@ class InvoiceDistribution extends Model
         return $this->belongsTo(TreasuryTransaction::class, 'treasury_transaction_id');
     }
 }
+
