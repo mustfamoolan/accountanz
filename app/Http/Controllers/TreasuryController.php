@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Bank;
 use App\Models\Fund;
 use App\Models\TreasuryTransaction;
 use App\Services\TreasuryService;
@@ -16,56 +15,79 @@ class TreasuryController extends Controller
     {
     }
 
-    public function index(Request $request)
+    /**
+     * Get or initialize the two vault accounts (IQD & USD)
+     */
+    protected function getVaultAccounts(): array
     {
-        $mainFund = Fund::firstOrCreate(
-            ['code' => 'FUND-MAIN'],
+        // Check if old FUND-MAIN exists; migrate it to VAULT-IQD seamlessly
+        $existingMain = Fund::where('code', 'FUND-MAIN')->first();
+        if ($existingMain) {
+            $existingMain->update([
+                'code' => 'VAULT-IQD',
+                'name' => 'الخزنة (دينار)',
+                'currency' => 'IQD',
+                'notes' => 'الخزنة بالدينار العراقي',
+            ]);
+        }
+
+        $vaultIqd = Fund::firstOrCreate(
+            ['code' => 'VAULT-IQD'],
             [
-                'name' => 'الصندوق الرئيسي للشركة',
+                'name' => 'الخزنة (دينار)',
                 'type' => 'main',
                 'currency' => 'IQD',
                 'balance' => 0.00,
                 'status' => 'active',
-                'notes' => 'الصندوق النقدي الرئيسي للإدارة والعمليات',
+                'notes' => 'الخزنة بالدينار العراقي',
             ]
         );
 
-        $funds = Fund::orderBy('id')->get();
-        $banks = Bank::orderBy('id')->get();
+        $vaultUsd = Fund::firstOrCreate(
+            ['code' => 'VAULT-USD'],
+            [
+                'name' => 'الخزنة (دولار)',
+                'type' => 'main',
+                'currency' => 'USD',
+                'balance' => 0.00,
+                'status' => 'active',
+                'notes' => 'الخزنة بالدولار الأمريكي',
+            ]
+        );
 
-        $selectedFundId = $request->filled('fund_id') ? (int) $request->fund_id : null;
-        $selectedFund = $selectedFundId ? Fund::find($selectedFundId) : null;
+        return [$vaultIqd, $vaultUsd];
+    }
 
-        $transactionsQuery = TreasuryTransaction::with(['source', 'destination', 'creator', 'investor'])
+    public function index(Request $request)
+    {
+        [$vaultIqd, $vaultUsd] = $this->getVaultAccounts();
+        $vaultIds = [$vaultIqd->id, $vaultUsd->id];
+
+        $transactionsQuery = TreasuryTransaction::with(['creator'])
+            ->where(function ($q) use ($vaultIds) {
+                $q->where(function ($sub) use ($vaultIds) {
+                    $sub->where('source_type', Fund::class)->whereIn('source_id', $vaultIds);
+                })->orWhere(function ($sub) use ($vaultIds) {
+                    $sub->where('destination_type', Fund::class)->whereIn('destination_id', $vaultIds);
+                });
+            })
+            ->whereIn('type', ['deposit', 'withdrawal'])
             ->latest('transaction_date');
 
-        if ($selectedFundId) {
-            $transactionsQuery->where(function ($q) use ($selectedFundId) {
-                $q->where(fn ($sub) => $sub->where('source_type', Fund::class)->where('source_id', $selectedFundId))
-                  ->orWhere(fn ($sub) => $sub->where('destination_type', Fund::class)->where('destination_id', $selectedFundId));
-            });
+        // Date filter only: from_date and to_date
+        if ($request->filled('from_date')) {
+            $transactionsQuery->whereDate('transaction_date', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $transactionsQuery->whereDate('transaction_date', '<=', $request->to_date);
         }
 
-        if ($request->filled('type')) {
-            $transactionsQuery->where('type', $request->type);
+        // Optional currency filter
+        if ($request->filled('currency') && in_array($request->currency, ['IQD', 'USD'])) {
+            $transactionsQuery->where('currency', $request->currency);
         }
 
-        $transactions = $transactionsQuery->paginate(20)->through(function ($tx) {
-            $accountName = '-';
-            if ($tx->type === 'transfer') {
-                $fromName = $tx->source?->name ?? 'مصدر';
-                $toName = $tx->destination?->name ?? 'مستلم';
-                $accountName = "{$fromName} ⬅ {$toName}";
-            } elseif ($tx->source_type === Fund::class && $tx->source) {
-                $accountName = $tx->source->name;
-            } elseif ($tx->destination_type === Fund::class && $tx->destination) {
-                $accountName = $tx->destination->name;
-            } elseif ($tx->source_type === Bank::class && $tx->source) {
-                $accountName = $tx->source->name;
-            } elseif ($tx->destination_type === Bank::class && $tx->destination) {
-                $accountName = $tx->destination->name;
-            }
-
+        $transactions = $transactionsQuery->paginate(25)->through(function ($tx) {
             return [
                 'id' => $tx->id,
                 'reference_no' => $tx->reference_no,
@@ -76,54 +98,59 @@ class TreasuryController extends Controller
                 'balance_after' => (float) $tx->balance_after,
                 'description' => $tx->description,
                 'transaction_date' => $tx->transaction_date->toISOString(),
-                'account_name' => $accountName,
                 'creator' => $tx->creator ? ['name' => $tx->creator->name] : null,
-                'investor' => $tx->investor ? ['name' => $tx->investor->name, 'code' => $tx->investor->code] : null,
             ];
         })->withQueryString();
 
-        $totalCashIqd = (float) Fund::where('currency', 'IQD')->sum('balance');
-        $totalCashUsd = (float) Fund::where('currency', 'USD')->sum('balance');
-        $totalBanksIqd = (float) Bank::where('currency', 'IQD')->sum('balance');
-        $totalBanksUsd = (float) Bank::where('currency', 'USD')->sum('balance');
-        $totalLiquidityIqd = $totalCashIqd + $totalBanksIqd;
-        $totalLiquidityUsd = $totalCashUsd + $totalBanksUsd;
+        // Calculate totals for Vault
+        $depositsQuery = TreasuryTransaction::where(function ($q) use ($vaultIds) {
+            $q->where('destination_type', Fund::class)->whereIn('destination_id', $vaultIds);
+        })->where('type', 'deposit');
 
-        $totalCash = Fund::sum('balance');
-        $totalBanks = Bank::sum('balance');
-        $totalLiquidity = $totalCash + $totalBanks;
+        $withdrawalsQuery = TreasuryTransaction::where(function ($q) use ($vaultIds) {
+            $q->where('source_type', Fund::class)->whereIn('source_id', $vaultIds);
+        })->where('type', 'withdrawal');
 
-        // Statistics for current month
-        $currentMonthDeposits = TreasuryTransaction::whereIn('type', ['deposit', 'capital_deposit'])
-            ->whereMonth('transaction_date', now()->month)
-            ->whereYear('transaction_date', now()->year)
-            ->sum('amount');
+        if ($request->filled('from_date')) {
+            $depositsQuery->whereDate('transaction_date', '>=', $request->from_date);
+            $withdrawalsQuery->whereDate('transaction_date', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $depositsQuery->whereDate('transaction_date', '<=', $request->to_date);
+            $withdrawalsQuery->whereDate('transaction_date', '<=', $request->to_date);
+        }
 
-        $currentMonthWithdrawals = TreasuryTransaction::whereIn('type', ['withdrawal', 'capital_withdrawal', 'profit_withdrawal', 'expense'])
-            ->whereMonth('transaction_date', now()->month)
-            ->whereYear('transaction_date', now()->year)
-            ->sum('amount');
+        $totalDepositsIqd = (clone $depositsQuery)->where('currency', 'IQD')->sum('amount');
+        $totalDepositsUsd = (clone $depositsQuery)->where('currency', 'USD')->sum('amount');
+        $totalWithdrawalsIqd = (clone $withdrawalsQuery)->where('currency', 'IQD')->sum('amount');
+        $totalWithdrawalsUsd = (clone $withdrawalsQuery)->where('currency', 'USD')->sum('amount');
 
         return Inertia::render('Treasury/Index', [
-            'mainFund' => $mainFund,
-            'funds' => $funds,
-            'banks' => $banks,
-            'selectedFund' => $selectedFund,
-            'selectedFundId' => $selectedFundId,
+            'vaultIqd' => [
+                'id' => $vaultIqd->id,
+                'name' => 'الخزنة (دينار)',
+                'currency' => 'IQD',
+                'balance' => (float) $vaultIqd->balance,
+            ],
+            'vaultUsd' => [
+                'id' => $vaultUsd->id,
+                'name' => 'الخزنة (دولار)',
+                'currency' => 'USD',
+                'balance' => (float) $vaultUsd->balance,
+            ],
             'transactions' => $transactions,
-            'filters' => $request->only(['type', 'fund_id']),
+            'filters' => [
+                'from_date' => $request->input('from_date', ''),
+                'to_date' => $request->input('to_date', ''),
+                'currency' => $request->input('currency', ''),
+            ],
             'stats' => [
-                'totalCash' => (float) $totalCash,
-                'totalBanks' => (float) $totalBanks,
-                'totalLiquidity' => (float) $totalLiquidity,
-                'totalCashIqd' => $totalCashIqd,
-                'totalCashUsd' => $totalCashUsd,
-                'totalBanksIqd' => $totalBanksIqd,
-                'totalBanksUsd' => $totalBanksUsd,
-                'totalLiquidityIqd' => $totalLiquidityIqd,
-                'totalLiquidityUsd' => $totalLiquidityUsd,
-                'currentMonthDeposits' => (float) $currentMonthDeposits,
-                'currentMonthWithdrawals' => (float) $currentMonthWithdrawals,
+                'balanceIqd' => (float) $vaultIqd->balance,
+                'balanceUsd' => (float) $vaultUsd->balance,
+                'totalDepositsIqd' => (float) $totalDepositsIqd,
+                'totalDepositsUsd' => (float) $totalDepositsUsd,
+                'totalWithdrawalsIqd' => (float) $totalWithdrawalsIqd,
+                'totalWithdrawalsUsd' => (float) $totalWithdrawalsUsd,
             ],
         ]);
     }
@@ -131,16 +158,31 @@ class TreasuryController extends Controller
     public function deposit(Request $request)
     {
         $validated = $request->validate([
-            'fund_id' => 'required|exists:funds,id',
-            'amount' => 'required|numeric|min:1',
-            'description' => 'required|string|max:500',
+            'currency' => 'required|in:IQD,USD',
+            'amount' => 'required|numeric|min:0.01',
+            'transaction_date' => 'required|date',
+            'description' => 'required|string|max:1000',
+        ], [
+            'currency.required' => 'يرجى اختيار العملة (دينار أو دولار).',
+            'amount.required' => 'يرجى إدخال مبلغ الإيداع.',
+            'amount.min' => 'يجب أن يكون المبلغ أكبر من الصفر.',
+            'transaction_date.required' => 'يرجى تحديد تاريخ العملية.',
+            'description.required' => 'يرجى كتابة تفاصيل العملية.',
         ]);
 
         try {
-            $fund = Fund::findOrFail($validated['fund_id']);
-            $this->treasuryService->deposit($fund, (float) $validated['amount'], $validated['description']);
+            [$vaultIqd, $vaultUsd] = $this->getVaultAccounts();
+            $targetVault = $validated['currency'] === 'USD' ? $vaultUsd : $vaultIqd;
 
-            return back()->with('success', 'تم تسجيل الإيداع في الصندوق بنجاح.');
+            $this->treasuryService->deposit(
+                $targetVault,
+                (float) $validated['amount'],
+                $validated['description'],
+                auth()->id(),
+                $validated['transaction_date']
+            );
+
+            return back()->with('success', 'تم تسجيل الإيداع في الخزنة بنجاح.');
         } catch (Exception $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -149,81 +191,31 @@ class TreasuryController extends Controller
     public function withdraw(Request $request)
     {
         $validated = $request->validate([
-            'fund_id' => 'required|exists:funds,id',
-            'amount' => 'required|numeric|min:1',
-            'description' => 'required|string|max:500',
-        ]);
-
-        try {
-            $fund = Fund::findOrFail($validated['fund_id']);
-            $this->treasuryService->withdraw($fund, (float) $validated['amount'], $validated['description']);
-
-            return back()->with('success', 'تم تسجيل السحب من الصندوق بنجاح.');
-        } catch (Exception $e) {
-            return back()->with('error', $e->getMessage());
-        }
-    }
-
-    public function transfer(Request $request)
-    {
-        $validated = $request->validate([
-            'from_type' => 'required|in:fund,bank',
-            'from_id' => 'required|integer',
-            'to_type' => 'required|in:fund,bank',
-            'to_id' => 'required|integer',
-            'amount' => 'required|numeric|min:1',
-            'description' => 'required|string|max:500',
-        ]);
-
-        try {
-            $fromSource = $validated['from_type'] === 'fund' 
-                ? Fund::findOrFail($validated['from_id']) 
-                : Bank::findOrFail($validated['from_id']);
-
-            $toDestination = $validated['to_type'] === 'fund' 
-                ? Fund::findOrFail($validated['to_id']) 
-                : Bank::findOrFail($validated['to_id']);
-
-            $this->treasuryService->transfer($fromSource, $toDestination, (float) $validated['amount'], $validated['description']);
-
-            return back()->with('success', 'تم تحويل المبلغ بنجاح بين الحسابين.');
-        } catch (Exception $e) {
-            return back()->with('error', $e->getMessage());
-        }
-    }
-
-    public function storeFund(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|max:50|unique:funds,code',
             'currency' => 'required|in:IQD,USD',
-            'type' => 'required|in:main,sub,petty_cash',
-            'initial_balance' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string',
+            'amount' => 'required|numeric|min:0.01',
+            'transaction_date' => 'required|date',
+            'description' => 'required|string|max:1000',
+        ], [
+            'currency.required' => 'يرجى اختيار العملة (دينار أو دولار).',
+            'amount.required' => 'يرجى إدخال مبلغ السحب.',
+            'amount.min' => 'يجب أن يكون المبلغ أكبر من الصفر.',
+            'transaction_date.required' => 'يرجى تحديد تاريخ العملية.',
+            'description.required' => 'يرجى كتابة تفاصيل العملية.',
         ]);
 
         try {
-            $fund = Fund::create([
-                'name' => $validated['name'],
-                'code' => strtoupper($validated['code']),
-                'type' => $validated['type'],
-                'currency' => $validated['currency'],
-                'balance' => 0.00,
-                'status' => 'active',
-                'notes' => $validated['notes'] ?? null,
-            ]);
+            [$vaultIqd, $vaultUsd] = $this->getVaultAccounts();
+            $sourceVault = $validated['currency'] === 'USD' ? $vaultUsd : $vaultIqd;
 
-            if (!empty($validated['initial_balance']) && (float) $validated['initial_balance'] > 0) {
-                $this->treasuryService->deposit(
-                    $fund,
-                    (float) $validated['initial_balance'],
-                    "رصيد افتتاحي للصندوق الجديد [{$fund->name}]",
-                    auth()->id()
-                );
-            }
+            $this->treasuryService->withdraw(
+                $sourceVault,
+                (float) $validated['amount'],
+                $validated['description'],
+                auth()->id(),
+                $validated['transaction_date']
+            );
 
-            return back()->with('success', "تم إنشاء الصندوق [{$fund->name}] بنجاح.");
+            return back()->with('success', 'تم تسجيل السحب من الخزنة بنجاح.');
         } catch (Exception $e) {
             return back()->with('error', $e->getMessage());
         }

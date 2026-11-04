@@ -1,9 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\BankController;
 use App\Http\Controllers\InvestorController;
-use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PeriodicInventoryController;
 use App\Http\Controllers\TreasuryController;
 use Illuminate\Support\Facades\Route;
@@ -28,52 +26,51 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 // Protected Routes
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
-        $totalCash = \App\Models\Fund::sum('balance');
-        $totalBanks = \App\Models\Bank::sum('balance');
-        $totalInvestorsCapital = \App\Models\Investor::sum('capital_balance');
-        $totalInvestorsProfit = \App\Models\Investor::sum('profit_balance');
-        $recentTransactions = \App\Models\TreasuryTransaction::with(['creator', 'investor'])
+        $vaultIqd = \App\Models\Fund::where('code', 'VAULT-IQD')->first();
+        $vaultUsd = \App\Models\Fund::where('code', 'VAULT-USD')->first();
+
+        $balanceIqd = (float) ($vaultIqd?->balance ?? 0);
+        $balanceUsd = (float) ($vaultUsd?->balance ?? 0);
+        $totalInvestorsCapital = (float) \App\Models\Investor::sum('capital_balance');
+        $totalInvestorsProfit = (float) \App\Models\Investor::sum('profit_balance');
+
+        $vaultIds = array_filter([$vaultIqd?->id, $vaultUsd?->id]);
+
+        $recentTransactions = \App\Models\TreasuryTransaction::with(['creator'])
+            ->where(function ($q) use ($vaultIds) {
+                if (!empty($vaultIds)) {
+                    $q->where(function ($sub) use ($vaultIds) {
+                        $sub->where('source_type', \App\Models\Fund::class)->whereIn('source_id', $vaultIds);
+                    })->orWhere(function ($sub) use ($vaultIds) {
+                        $sub->where('destination_type', \App\Models\Fund::class)->whereIn('destination_id', $vaultIds);
+                    });
+                }
+            })
+            ->whereIn('type', ['deposit', 'withdrawal'])
             ->latest('transaction_date')
             ->take(6)
             ->get();
 
         return Inertia::render('Dashboard', [
             'metrics' => [
-                'totalCash' => (float) $totalCash,
-                'totalBanks' => (float) $totalBanks,
-                'totalLiquidity' => (float) ($totalCash + $totalBanks),
-                'totalInvestorsCapital' => (float) $totalInvestorsCapital,
-                'totalInvestorsProfit' => (float) $totalInvestorsProfit,
+                'vaultBalanceIqd' => $balanceIqd,
+                'vaultBalanceUsd' => $balanceUsd,
+                'totalCash' => $balanceIqd,
+                'totalBanks' => 0,
+                'totalLiquidity' => $balanceIqd,
+                'totalInvestorsCapital' => $totalInvestorsCapital,
+                'totalInvestorsProfit' => $totalInvestorsProfit,
             ],
             'recentTransactions' => $recentTransactions,
         ]);
     })->name('dashboard');
 
-    // Treasury & Funds
+    // The Vault (الخزنة) - Strictly Independent
     Route::get('/treasury', [TreasuryController::class, 'index'])->name('treasury.index');
     Route::post('/treasury/deposit', [TreasuryController::class, 'deposit'])->name('treasury.deposit');
     Route::post('/treasury/withdraw', [TreasuryController::class, 'withdraw'])->name('treasury.withdraw');
-    Route::post('/treasury/transfer', [TreasuryController::class, 'transfer'])->name('treasury.transfer');
-    Route::post('/treasury/funds', [TreasuryController::class, 'storeFund'])->name('treasury.funds.store');
 
-    // Banks Management
-    Route::get('/banks', [BankController::class, 'index'])->name('banks.index');
-    Route::post('/banks', [BankController::class, 'store'])->name('banks.store');
-    Route::put('/banks/{bank}', [BankController::class, 'update'])->name('banks.update');
-    Route::delete('/banks/{bank}', [BankController::class, 'destroy'])->name('banks.destroy');
-    Route::post('/banks/{bank}/deposit', [BankController::class, 'deposit'])->name('banks.deposit');
-    Route::post('/banks/{bank}/withdraw', [BankController::class, 'withdraw'])->name('banks.withdraw');
-
-    // Invoices & Sales Management
-    Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
-    Route::get('/invoices/create', [InvoiceController::class, 'create'])->name('invoices.create');
-    Route::post('/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
-    Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
-    Route::get('/invoices/{invoice}/sell', [InvoiceController::class, 'sellForm'])->name('invoices.sell');
-    Route::post('/invoices/{invoice}/sell', [InvoiceController::class, 'sell'])->name('invoices.sell.submit');
-    Route::post('/customers', [InvoiceController::class, 'storeCustomer'])->name('customers.store');
-
-    // Investors Management
+    // Investors Management (المستثمرون)
     Route::get('/investors', [InvestorController::class, 'index'])->name('investors.index');
     Route::post('/investors', [InvestorController::class, 'store'])->name('investors.store');
     Route::get('/investors/{investor}', [InvestorController::class, 'show'])->name('investors.show');

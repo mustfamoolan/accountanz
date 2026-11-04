@@ -8,13 +8,13 @@ import {
     DataGrid,
     Column,
     TransactionBadge,
-    FilterBar,
     MoneyDisplay,
 } from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Dialog,
     DialogContent,
@@ -27,134 +27,111 @@ import {
     Wallet,
     ArrowDownLeft,
     ArrowUpRight,
-    ArrowLeftRight,
-    Coins,
-    Landmark,
-    TrendingUp,
-    FileText,
-    PlusCircle,
     DollarSign,
+    Coins,
+    Calendar,
+    Filter,
+    RotateCcw,
+    TrendingDown,
+    TrendingUp,
 } from 'lucide-react';
 
-interface Fund {
+interface VaultAccount {
     id: number;
     name: string;
-    code: string;
-    currency: string;
-    balance: number | string;
-    notes?: string;
-}
-
-interface Bank {
-    id: number;
-    name: string;
-    account_number: string;
-    currency: string;
-    balance: number | string;
+    currency: 'IQD' | 'USD';
+    balance: number;
 }
 
 interface Transaction {
     id: number;
     reference_no: string;
-    type: string;
-    amount: number | string;
-    currency: string;
-    balance_before: number | string;
-    balance_after: number | string;
+    type: 'deposit' | 'withdrawal' | string;
+    amount: number;
+    currency: 'IQD' | 'USD' | string;
+    balance_before: number;
+    balance_after: number;
     description: string;
     transaction_date: string;
-    account_name: string;
-    creator?: { name: string; username: string };
-    investor?: { name: string; code: string };
+    creator?: { name: string };
 }
 
 interface Props {
-    mainFund: Fund;
-    funds: Fund[];
-    banks: Bank[];
-    selectedFund?: Fund | null;
-    selectedFundId?: number | null;
+    vaultIqd: VaultAccount;
+    vaultUsd: VaultAccount;
     transactions: {
         data: Transaction[];
         links: any[];
         total: number;
     };
-    filters: { type?: string; fund_id?: string };
+    filters: {
+        from_date?: string;
+        to_date?: string;
+        currency?: string;
+    };
     stats: {
-        totalCash: number;
-        totalBanks: number;
-        totalLiquidity: number;
-        totalCashIqd?: number;
-        totalCashUsd?: number;
-        totalBanksIqd?: number;
-        totalBanksUsd?: number;
-        totalLiquidityIqd?: number;
-        totalLiquidityUsd?: number;
-        currentMonthDeposits: number;
-        currentMonthWithdrawals: number;
+        balanceIqd: number;
+        balanceUsd: number;
+        totalDepositsIqd: number;
+        totalDepositsUsd: number;
+        totalWithdrawalsIqd: number;
+        totalWithdrawalsUsd: number;
     };
 }
 
 export default function TreasuryIndex({
-    mainFund,
-    funds,
-    banks,
-    selectedFund,
-    selectedFundId,
+    vaultIqd,
+    vaultUsd,
     transactions,
     filters,
     stats,
 }: Props) {
-    const [createFundOpen, setCreateFundOpen] = useState(false);
+    // Dialog states
     const [depositOpen, setDepositOpen] = useState(false);
     const [withdrawOpen, setWithdrawOpen] = useState(false);
-    const [transferOpen, setTransferOpen] = useState(false);
 
-    // Create Fund form
-    const createFundForm = useForm({
-        name: '',
-        code: '',
-        currency: 'IQD',
-        type: 'sub',
-        initial_balance: '',
-        notes: '',
-    });
+    // Filter states (Date range only)
+    const [fromDate, setFromDate] = useState(filters.from_date || '');
+    const [toDate, setToDate] = useState(filters.to_date || '');
+    const [currencyFilter, setCurrencyFilter] = useState(filters.currency || '');
 
-    // Deposit form
-    const depositForm = useForm({
-        fund_id: selectedFundId || mainFund?.id || 1,
-        amount: '',
-        description: '',
-    });
-
-    // Withdraw form
-    const withdrawForm = useForm({
-        fund_id: selectedFundId || mainFund?.id || 1,
-        amount: '',
-        description: '',
-    });
-
-    // Transfer form
-    const transferForm = useForm({
-        from_type: 'fund',
-        from_id: selectedFundId || mainFund?.id || 1,
-        to_type: 'bank',
-        to_id: banks[0]?.id || '',
-        amount: '',
-        description: '',
-    });
-
-    const filterByFund = (fundId: number | null) => {
-        const query: any = { ...filters };
-        if (fundId) {
-            query.fund_id = fundId;
-        } else {
-            delete query.fund_id;
-        }
-        router.get('/treasury', query, { preserveState: true, preserveScroll: true });
+    const applyFilter = (newCurrency = currencyFilter) => {
+        router.get(
+            '/treasury',
+            {
+                from_date: fromDate || undefined,
+                to_date: toDate || undefined,
+                currency: newCurrency || undefined,
+            },
+            {
+                preserveState: true,
+                preserveScroll: true,
+            }
+        );
     };
 
-    const handleDeposit: FormEventHandler = (e) => {
+    const resetFilter = () => {
+        setFromDate('');
+        setToDate('');
+        setCurrencyFilter('');
+        router.get('/treasury', {}, { preserveState: true, preserveScroll: true });
+    };
+
+    const handleCurrencyTabChange = (c: string) => {
+        const next = currencyFilter === c ? '' : c;
+        setCurrencyFilter(next);
+        applyFilter(next);
+    };
+
+    // Deposit Form
+    const depositForm = useForm({
+        currency: 'IQD' as 'IQD' | 'USD',
+        amount: '',
+        transaction_date: new Date().toISOString().split('T')[0],
+        description: '',
+    });
+
+    const handleDepositSubmit: FormEventHandler = (e) => {
         e.preventDefault();
         depositForm.post('/treasury/deposit', {
             onSuccess: () => {
@@ -164,7 +141,15 @@ export default function TreasuryIndex({
         });
     };
 
-    const handleWithdraw: FormEventHandler = (e) => {
+    // Withdraw Form
+    const withdrawForm = useForm({
+        currency: 'IQD' as 'IQD' | 'USD',
+        amount: '',
+        transaction_date: new Date().toISOString().split('T')[0],
+        description: '',
+    });
+
+    const handleWithdrawSubmit: FormEventHandler = (e) => {
         e.preventDefault();
         withdrawForm.post('/treasury/withdraw', {
             onSuccess: () => {
@@ -174,75 +159,91 @@ export default function TreasuryIndex({
         });
     };
 
-    const handleTransfer: FormEventHandler = (e) => {
-        e.preventDefault();
-        transferForm.post('/treasury/transfer', {
-            onSuccess: () => {
-                setTransferOpen(false);
-                transferForm.reset();
-            },
-        });
-    };
+    // Available balance helper for the withdraw modal
+    const currentWithdrawBalance =
+        withdrawForm.data.currency === 'USD' ? stats.balanceUsd : stats.balanceIqd;
 
-    const handleCreateFund: FormEventHandler = (e) => {
-        e.preventDefault();
-        createFundForm.post('/treasury/funds', {
-            onSuccess: () => {
-                setCreateFundOpen(false);
-                createFundForm.reset();
-            },
-        });
-    };
-
-    // Columns definition for unified DataGrid
+    // Columns for DataGrid
     const columns: Column<Transaction>[] = [
         {
-            header: 'رقم المرجع',
-            accessorKey: 'reference_no',
-            className: 'font-mono font-bold text-primary whitespace-nowrap',
-        },
-        {
-            header: 'الصندوق / المصدر',
-            accessorKey: 'account_name',
-            className: 'font-semibold whitespace-nowrap',
+            header: 'رقم الحركة',
+            align: 'right',
+            cell: (tx) => (
+                <span className="font-mono text-xs font-semibold text-primary">
+                    {tx.reference_no}
+                </span>
+            ),
         },
         {
             header: 'نوع العملية',
+            align: 'center',
             cell: (tx) => <TransactionBadge type={tx.type} />,
         },
         {
-            header: 'البيان والتفاصيل',
+            header: 'المبلغ والعملة',
+            align: 'right',
             cell: (tx) => (
-                <div className="max-w-xs">
-                    <div>{tx.description}</div>
-                    {tx.investor && (
-                        <span className="text-[10px] text-muted-foreground">
-                            المستثمر: {tx.investor.name} ({tx.investor.code})
-                        </span>
-                    )}
+                <div className="flex items-center gap-1.5 font-bold">
+                    <span
+                        className={
+                            tx.type === 'deposit'
+                                ? 'text-emerald-600 dark:text-emerald-400 font-mono text-sm'
+                                : 'text-rose-600 dark:text-rose-400 font-mono text-sm'
+                        }
+                    >
+                        {tx.type === 'deposit' ? '+' : '-'}
+                        {Number(tx.amount).toLocaleString()}
+                    </span>
+                    <Badge
+                        variant="outline"
+                        className={
+                            tx.currency === 'USD'
+                                ? 'text-[10px] bg-blue-50 text-blue-700 border-blue-200'
+                                : 'text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200'
+                        }
+                    >
+                        {tx.currency === 'USD' ? '$ دولار' : 'د.ع دينار'}
+                    </Badge>
                 </div>
             ),
         },
         {
-            header: 'المبلغ',
-            align: 'left',
+            header: 'الرصيد قبل',
+            align: 'right',
             cell: (tx) => (
-                <MoneyDisplay amount={tx.amount} currency={tx.currency} size="sm" variant="default" />
+                <span className="font-mono text-xs text-muted-foreground">
+                    {Number(tx.balance_before).toLocaleString()} {tx.currency}
+                </span>
             ),
         },
         {
             header: 'الرصيد بعد',
-            align: 'left',
+            align: 'right',
             cell: (tx) => (
-                <MoneyDisplay amount={tx.balance_after} currency={tx.currency} size="sm" />
+                <span className="font-mono text-xs font-semibold text-foreground">
+                    {Number(tx.balance_after).toLocaleString()} {tx.currency}
+                </span>
             ),
         },
         {
-            header: 'التاريخ',
+            header: 'التفاصيل والبيان',
+            align: 'right',
+            cell: (tx) => (
+                <span className="text-xs text-foreground/90 max-w-xs block truncate" title={tx.description}>
+                    {tx.description}
+                </span>
+            ),
+        },
+        {
+            header: 'تاريخ العملية',
             align: 'center',
             cell: (tx) => (
                 <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap" dir="ltr">
-                    {new Date(tx.transaction_date).toLocaleString('ar-IQ', { dateStyle: 'short', timeStyle: 'short' })}
+                    {new Date(tx.transaction_date).toLocaleDateString('ar-IQ', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                    })}
                 </span>
             ),
         },
@@ -250,273 +251,352 @@ export default function TreasuryIndex({
             header: 'المسؤول',
             align: 'center',
             cell: (tx) => (
-                <span className="text-muted-foreground whitespace-nowrap text-xs">
+                <span className="text-muted-foreground text-xs whitespace-nowrap">
                     {tx.creator?.name || 'النظام'}
                 </span>
             ),
         },
     ];
 
-    // Mobile Card Renderer for DataGrid
     const renderMobileCard = (tx: Transaction) => (
-        <div className="space-y-1.5 text-xs">
+        <div className="space-y-2 text-xs">
             <div className="flex items-center justify-between">
                 <span className="font-mono font-bold text-primary">{tx.reference_no}</span>
                 <TransactionBadge type={tx.type} />
             </div>
-            <div className="flex justify-between font-semibold text-foreground">
-                <span>{tx.account_name}</span>
-                <MoneyDisplay amount={tx.amount} currency={tx.currency} size="md" />
+            <div className="flex justify-between items-center font-bold">
+                <span className="truncate max-w-[200px] text-foreground">{tx.description}</span>
+                <span
+                    className={
+                        tx.type === 'deposit'
+                            ? 'text-emerald-600 font-mono text-sm'
+                            : 'text-rose-600 font-mono text-sm'
+                    }
+                >
+                    {tx.type === 'deposit' ? '+' : '-'}
+                    {Number(tx.amount).toLocaleString()} {tx.currency}
+                </span>
             </div>
-            <p className="text-muted-foreground text-[11px] line-clamp-2">{tx.description}</p>
-            <div className="flex justify-between items-center text-[10px] text-muted-foreground pt-1 border-t border-border/50">
-                <span>الرصيد بعد: <strong className="font-mono">{Number(tx.balance_after).toLocaleString()} د.ع</strong></span>
+            <div className="flex justify-between items-center text-[10px] text-muted-foreground pt-1.5 border-t border-border/50">
+                <span>
+                    الرصيد بعد: <strong className="font-mono">{Number(tx.balance_after).toLocaleString()} {tx.currency}</strong>
+                </span>
                 <span dir="ltr">{new Date(tx.transaction_date).toLocaleDateString('ar-IQ')}</span>
             </div>
         </div>
     );
 
-    // Filter items for FilterBar
-    const filterItems = [
-        { id: null, label: 'جميع الصناديق', count: funds.length },
-        ...funds.map((f) => ({
-            id: f.id,
-            label: `${f.name} (${f.currency})`,
-            badge: (
-                <span className="font-mono text-[10px] text-primary">
-                    {Number(f.balance).toLocaleString()} {f.currency}
-                </span>
-            ),
-        })),
-    ];
-
     return (
-        <AuthenticatedLayout header="إدارة الصناديق والخزينة" activeNav="treasury">
-            <Head title="الصندوق الرئيسي والخزينة" />
+        <AuthenticatedLayout header="الخزنة" activeNav="treasury">
+            <Head title="الخزنة المركزية - دينار ودولار" />
 
             <div className="space-y-6" dir="rtl">
-                {/* 1. Standard Page Header */}
+                {/* 1. Header with direct actions */}
                 <PageHeader
-                    title={selectedFund ? `${selectedFund.name} (${selectedFund.currency})` : 'الصناديق المالية والخزينة العامة'}
-                    description="الخزينة المركزية لتدفقات الأموال بالدينار العراقي والدولار الأمريكي ورؤوس أموال الشركاء"
+                    title="الخزنة"
+                    description="الخزنة المركزية المستقلة لإدارة الإيداعات والسحوبات النقدية بالدينار العراقي والدولار الأمريكي."
                     icon={Wallet}
-                    badge={
-                        selectedFund ? (
-                            <Badge className="bg-primary text-primary-foreground text-xs">
-                                صندوق محدد
-                            </Badge>
-                        ) : (
-                            <div className="flex gap-1">
-                                <Badge variant="secondary" className="font-mono text-xs">
-                                    {funds.length} صناديق
-                                </Badge>
-                                <Badge variant="outline" className="text-xs">
-                                    دينار + دولار
-                                </Badge>
-                            </div>
-                        )
-                    }
                     actions={
-                        <>
-                            <Button onClick={() => setCreateFundOpen(true)} className="gap-1.5 h-9 text-xs">
-                                <PlusCircle className="h-4 w-4" />
-                                <span>إضافة صندوق جديد</span>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                size="sm"
+                                onClick={() => setDepositOpen(true)}
+                                className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                            >
+                                <ArrowDownLeft className="h-4 w-4" />
+                                <span>إيداع في الخزنة</span>
                             </Button>
-                            <Button onClick={() => setDepositOpen(true)} variant="outline" className="gap-1.5 h-9 text-xs">
-                                <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
-                                <span>إيداع نقدي</span>
-                            </Button>
-                            <Button onClick={() => setWithdrawOpen(true)} variant="outline" className="gap-1.5 h-9 text-xs">
+
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setWithdrawOpen(true)}
+                                className="gap-1.5 text-xs border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                            >
                                 <ArrowUpRight className="h-4 w-4 text-rose-600" />
-                                <span>سحب نقدي</span>
+                                <span>سحب من الخزنة</span>
                             </Button>
-                            <Button onClick={() => setTransferOpen(true)} variant="outline" className="gap-1.5 h-9 text-xs">
-                                <ArrowLeftRight className="h-4 w-4 text-blue-600" />
-                                <span>تحويل مالي</span>
-                            </Button>
-                        </>
+                        </div>
                     }
                 />
 
-                {/* 2. Responsive Filter Bar */}
-                <FilterBar
-                    title="تصفية حسب الصندوق:"
-                    items={filterItems}
-                    selectedId={selectedFundId ?? null}
-                    onSelect={(id) => filterByFund(id)}
-                    onClear={() => filterByFund(null)}
-                />
-
-                {/* 3. Unified Financial KPI StatGrid with Dual Currency */}
+                {/* 2. Stat Cards for Balances & Movements */}
                 <StatGrid columns={4}>
-                    {selectedFund ? (
-                        <>
-                            <StatCard
-                                title={`رصيد ${selectedFund.name}`}
-                                value={selectedFund.balance}
-                                currency={selectedFund.currency === 'USD' ? '$' : 'د.ع'}
-                                color="primary"
-                                icon={Wallet}
-                                description="الرصيد المتاح حالياً في الصندوق المختار"
-                            />
-                            <StatCard
-                                title="النقد العام بالدينار"
-                                value={stats.totalCashIqd || 0}
-                                currency="د.ع"
-                                color="emerald"
-                                icon={Coins}
-                                description="إجمالي نقد الصناديق بالدينار"
-                            />
-                            <StatCard
-                                title="النقد العام بالدولار"
-                                value={stats.totalCashUsd || 0}
-                                currency="$"
-                                color="blue"
-                                icon={DollarSign}
-                                description="إجمالي نقد الصناديق بالدولار"
-                            />
-                            <StatCard
-                                title="الأرصدة المصرفية بالدينار"
-                                value={stats.totalBanksIqd || 0}
-                                currency="د.ع"
-                                color="purple"
-                                icon={Landmark}
-                                description="ودائع البنوك بالدينار"
-                            />
-                        </>
-                    ) : (
-                        <>
-                            <StatCard
-                                title="الصناديق النقدية (دينار)"
-                                value={stats.totalCashIqd || 0}
-                                currency="د.ع"
-                                color="emerald"
-                                icon={Coins}
-                                description="نقد متوفر في الخزائن بالدينار"
-                            />
-                            <StatCard
-                                title="الصناديق النقدية (دولار)"
-                                value={stats.totalCashUsd || 0}
-                                currency="$"
-                                color="blue"
-                                icon={DollarSign}
-                                description="نقد متوفر في الخزائن بالدولار"
-                            />
-                            <StatCard
-                                title="الأرصدة المصرفية (دينار)"
-                                value={stats.totalBanksIqd || 0}
-                                currency="د.ع"
-                                color="purple"
-                                icon={Landmark}
-                                description="ودائع البنوك بالدينار"
-                            />
-                            <StatCard
-                                title="الأرصدة المصرفية (دولار)"
-                                value={stats.totalBanksUsd || 0}
-                                currency="$"
-                                color="amber"
-                                icon={Landmark}
-                                description="ودائع البنوك بالدولار"
-                            />
-                        </>
-                    )}
+                    <StatCard
+                        title="رصيد الخزنة (دينار)"
+                        value={stats.balanceIqd}
+                        currency="د.ع"
+                        color="emerald"
+                        icon={Coins}
+                        description={`إيداعات: ${Number(stats.totalDepositsIqd).toLocaleString()} | سحوبات: ${Number(stats.totalWithdrawalsIqd).toLocaleString()}`}
+                    />
+
+                    <StatCard
+                        title="رصيد الخزنة (دولار)"
+                        value={stats.balanceUsd}
+                        currency="$"
+                        color="blue"
+                        icon={DollarSign}
+                        description={`إيداعات: $${Number(stats.totalDepositsUsd).toLocaleString()} | سحوبات: $${Number(stats.totalWithdrawalsUsd).toLocaleString()}`}
+                    />
+
+                    <StatCard
+                        title="إجمالي الإيداعات"
+                        value={stats.totalDepositsIqd}
+                        currency="د.ع"
+                        color="purple"
+                        icon={TrendingUp}
+                        description={`وبالدولار: $${Number(stats.totalDepositsUsd).toLocaleString()}`}
+                    />
+
+                    <StatCard
+                        title="إجمالي السحوبات"
+                        value={stats.totalWithdrawalsIqd}
+                        currency="د.ع"
+                        color="amber"
+                        icon={TrendingDown}
+                        description={`وبالدولار: $${Number(stats.totalWithdrawalsUsd).toLocaleString()}`}
+                    />
                 </StatGrid>
 
-                {/* 4. Unified DataGrid */}
-                <DataGrid
-                    title={`سجل الحركات المالي والتتبع الدقيق ${selectedFund ? `(خاص بـ ${selectedFund.name})` : '(العام)'}`}
-                    description="يوثق الصندوق المعني ونوع العملية والمبالغ وتفاصيل التتبع"
-                    icon={FileText}
-                    columns={columns}
-                    data={transactions.data}
-                    total={transactions.total}
-                    links={transactions.links}
-                    renderMobileCard={renderMobileCard}
-                    headerActions={
-                        <select
-                            value={filters.type || ''}
-                            onChange={(e) => {
-                                const query: any = { ...filters };
-                                if (e.target.value) query.type = e.target.value;
-                                else delete query.type;
-                                router.get('/treasury', query, { preserveState: true });
-                            }}
-                            className="h-8 px-2.5 rounded-md border border-border bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                        >
-                            <option value="">جميع أنواع الحركات</option>
-                            <option value="deposit">إيداع نقدي</option>
-                            <option value="withdrawal">سحب نقدي</option>
-                            <option value="transfer">تحويل مالي</option>
-                            <option value="capital_deposit">إيداع رأس مال</option>
-                            <option value="capital_withdrawal">سحب رأس مال</option>
-                            <option value="profit_distribution">إثبات أرباح</option>
-                            <option value="profit_withdrawal">سحب أرباح</option>
-                            <option value="expense">مصروف</option>
-                        </select>
-                    }
-                />
-            </div>
+                {/* 3. Date Range Filter Only */}
+                <div className="rounded-xl border border-border/80 bg-card p-4 shadow-2xs space-y-3">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <Filter className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-xs font-bold text-foreground">فلتر حركات الخزنة حسب التاريخ:</span>
+                        </div>
 
-            {/* Modals */}
-            {/* 1. Modal: Deposit */}
-            <Dialog open={depositOpen} onOpenChange={setDepositOpen}>
-                <DialogContent className="w-[95vw] sm:max-w-md p-4 sm:p-6" dir="rtl">
-                    <DialogHeader>
-                        <DialogTitle className="text-base font-bold flex items-center gap-2">
-                            <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
-                            <span>إيداع نقدي في الصندوق</span>
-                        </DialogTitle>
-                        <DialogDescription className="text-xs">
-                            تسجيل مبلغ نقدي داخل الخزينة مع توثيق البيان في السجل
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <form onSubmit={handleDeposit} className="space-y-4">
-                        <div className="space-y-1.5 text-right">
-                            <Label className="text-xs font-semibold">الصندوق المستهدف</Label>
-                            <select
-                                value={depositForm.data.fund_id}
-                                onChange={(e) => depositForm.setData('fund_id', Number(e.target.value))}
-                                className="w-full h-9 px-3 rounded-md border border-border bg-background text-xs"
+                        {/* Quick currency tabs */}
+                        <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg">
+                            <button
+                                type="button"
+                                onClick={() => handleCurrencyTabChange('')}
+                                className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                                    currencyFilter === ''
+                                        ? 'bg-background font-bold text-foreground shadow-xs'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                }`}
                             >
-                                {funds.map((f) => (
-                                    <option key={f.id} value={f.id}>
-                                        {f.name} (رصيده: {Number(f.balance).toLocaleString()} {f.currency})
-                                    </option>
-                                ))}
-                            </select>
+                                كل العملات
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleCurrencyTabChange('IQD')}
+                                className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                                    currencyFilter === 'IQD'
+                                        ? 'bg-emerald-500 text-white font-bold shadow-xs'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                            >
+                                دينار عراقي (IQD)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleCurrencyTabChange('USD')}
+                                className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                                    currencyFilter === 'USD'
+                                        ? 'bg-blue-600 text-white font-bold shadow-xs'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                            >
+                                دولار أمريكي (USD)
+                            </button>
                         </div>
+                    </div>
 
-                        <div className="space-y-1.5 text-right">
-                            <Label className="text-xs font-semibold">المبلغ (د.ع)</Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 items-end pt-1">
+                        <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                <Calendar className="h-3.5 w-3.5" />
+                                <span>من تاريخ</span>
+                            </Label>
                             <Input
-                                type="number"
-                                step="any"
-                                placeholder="مثال: 1000000"
-                                value={depositForm.data.amount}
-                                onChange={(e) => depositForm.setData('amount', e.target.value)}
-                                required
-                                className="font-mono text-left h-9"
-                                dir="ltr"
-                            />
-                        </div>
-
-                        <div className="space-y-1.5 text-right">
-                            <Label className="text-xs font-semibold">البيان والسبب</Label>
-                            <Input
-                                placeholder="مثال: إيداع نقدي من مبيعات فرع الكرادة"
-                                value={depositForm.data.description}
-                                onChange={(e) => depositForm.setData('description', e.target.value)}
-                                required
+                                type="date"
+                                value={fromDate}
+                                onChange={(e) => setFromDate(e.target.value)}
                                 className="h-9 text-xs"
                             />
                         </div>
 
-                        <DialogFooter className="gap-2 sm:gap-0 pt-2 flex-col-reverse sm:flex-row">
-                            <Button type="button" variant="outline" onClick={() => setDepositOpen(false)} className="w-full sm:w-auto h-9 text-xs">
+                        <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                <Calendar className="h-3.5 w-3.5" />
+                                <span>إلى تاريخ</span>
+                            </Label>
+                            <Input
+                                type="date"
+                                value={toDate}
+                                onChange={(e) => setToDate(e.target.value)}
+                                className="h-9 text-xs"
+                            />
+                        </div>
+
+                        <div className="flex items-center gap-2 sm:col-span-2">
+                            <Button
+                                type="button"
+                                size="sm"
+                                onClick={() => applyFilter()}
+                                className="h-9 px-4 text-xs gap-1.5 flex-1"
+                            >
+                                <Filter className="h-3.5 w-3.5" />
+                                <span>تطبيق الفلتر</span>
+                            </Button>
+
+                            {(fromDate || toDate || currencyFilter) && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={resetFilter}
+                                    className="h-9 px-3 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                                >
+                                    <RotateCcw className="h-3.5 w-3.5" />
+                                    <span>مسح الفلتر</span>
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* 4. DataGrid of Vault Transactions */}
+                <DataGrid<Transaction>
+                    title="سجل حركات الخزنة"
+                    description={`إجمالي العمليات المسجلة: ${transactions.total} حركة نقدية`}
+                    icon={Wallet}
+                    columns={columns}
+                    data={transactions.data}
+                    links={transactions.links}
+                    renderMobileCard={renderMobileCard}
+                    emptyMessage="لا توجد حركات مسجلة في الخزنة ضمن الفترة المحددة."
+                />
+            </div>
+
+            {/* ================= MODAL: DEPOSIT ================= */}
+            <Dialog open={depositOpen} onOpenChange={setDepositOpen}>
+                <DialogContent className="sm:max-w-md" dir="rtl">
+                    <form onSubmit={handleDepositSubmit}>
+                        <DialogHeader>
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40">
+                                    <ArrowDownLeft className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <DialogTitle className="text-base font-bold">إيداع في الخزنة</DialogTitle>
+                                    <DialogDescription className="text-xs">
+                                        تسجيل عملية إيداع نقدي مباشر في الخزنة بالدينار أو الدولار.
+                                    </DialogDescription>
+                                </div>
+                            </div>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-4">
+                            {/* Currency Selector */}
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold">العملة *</Label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => depositForm.setData('currency', 'IQD')}
+                                        className={`p-2.5 rounded-lg border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                                            depositForm.data.currency === 'IQD'
+                                                ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 ring-2 ring-emerald-500/20'
+                                                : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
+                                        }`}
+                                    >
+                                        <Coins className="h-4 w-4" />
+                                        <span>دينار عراقي (IQD)</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => depositForm.setData('currency', 'USD')}
+                                        className={`p-2.5 rounded-lg border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                                            depositForm.data.currency === 'USD'
+                                                ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 ring-2 ring-blue-500/20'
+                                                : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
+                                        }`}
+                                    >
+                                        <DollarSign className="h-4 w-4" />
+                                        <span>دولار أمريكي (USD)</span>
+                                    </button>
+                                </div>
+                                {depositForm.errors.currency && (
+                                    <p className="text-xs text-rose-500">{depositForm.errors.currency}</p>
+                                )}
+                            </div>
+
+                            {/* Amount */}
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold">المبلغ *</Label>
+                                <div className="relative">
+                                    <Input
+                                        type="number"
+                                        step="any"
+                                        min="0.01"
+                                        placeholder="0.00"
+                                        value={depositForm.data.amount}
+                                        onChange={(e) => depositForm.setData('amount', e.target.value)}
+                                        className="h-10 font-mono text-sm pl-16 text-left"
+                                        dir="ltr"
+                                        required
+                                    />
+                                    <span className="absolute left-3 top-2.5 text-xs font-bold text-muted-foreground">
+                                        {depositForm.data.currency}
+                                    </span>
+                                </div>
+                                {depositForm.errors.amount && (
+                                    <p className="text-xs text-rose-500">{depositForm.errors.amount}</p>
+                                )}
+                            </div>
+
+                            {/* Date */}
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold">تاريخ العملية *</Label>
+                                <Input
+                                    type="date"
+                                    value={depositForm.data.transaction_date}
+                                    onChange={(e) => depositForm.setData('transaction_date', e.target.value)}
+                                    className="h-10 text-xs"
+                                    required
+                                />
+                                {depositForm.errors.transaction_date && (
+                                    <p className="text-xs text-rose-500">{depositForm.errors.transaction_date}</p>
+                                )}
+                            </div>
+
+                            {/* Description */}
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold">تفاصيل العملية / البيان *</Label>
+                                <Textarea
+                                    rows={3}
+                                    placeholder="اكتب تفاصيل ومصدر هذا الإيداع..."
+                                    value={depositForm.data.description}
+                                    onChange={(e) => depositForm.setData('description', e.target.value)}
+                                    className="text-xs resize-none"
+                                    required
+                                />
+                                {depositForm.errors.description && (
+                                    <p className="text-xs text-rose-500">{depositForm.errors.description}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <DialogFooter className="gap-2 sm:gap-0">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setDepositOpen(false)}
+                            >
                                 إلغاء
                             </Button>
-                            <Button type="submit" disabled={depositForm.processing} className="w-full sm:w-auto h-9 text-xs">
+                            <Button
+                                type="submit"
+                                size="sm"
+                                disabled={depositForm.processing}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            >
                                 {depositForm.processing ? 'جاري الحفظ...' : 'تأكيد الإيداع'}
                             </Button>
                         </DialogFooter>
@@ -524,290 +604,141 @@ export default function TreasuryIndex({
                 </DialogContent>
             </Dialog>
 
-            {/* 2. Modal: Withdraw */}
+            {/* ================= MODAL: WITHDRAW ================= */}
             <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
-                <DialogContent className="w-[95vw] sm:max-w-md p-4 sm:p-6" dir="rtl">
-                    <DialogHeader>
-                        <DialogTitle className="text-base font-bold flex items-center gap-2">
-                            <ArrowUpRight className="h-4 w-4 text-rose-600" />
-                            <span>سحب نقدي من الصندوق</span>
-                        </DialogTitle>
-                        <DialogDescription className="text-xs">
-                            سحب مبلغ من الصندوق مع التأكد الصارم من توفر الرصيد الكافي
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <form onSubmit={handleWithdraw} className="space-y-4">
-                        <div className="space-y-1.5 text-right">
-                            <Label className="text-xs font-semibold">الصندوق المصدر</Label>
-                            <select
-                                value={withdrawForm.data.fund_id}
-                                onChange={(e) => withdrawForm.setData('fund_id', Number(e.target.value))}
-                                className="w-full h-9 px-3 rounded-md border border-border bg-background text-xs"
-                            >
-                                {funds.map((f) => (
-                                    <option key={f.id} value={f.id}>
-                                        {f.name} (المتوفر: {Number(f.balance).toLocaleString()} {f.currency})
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="space-y-1.5 text-right">
-                            <Label className="text-xs font-semibold">المبلغ المراد سحبه (د.ع)</Label>
-                            <Input
-                                type="number"
-                                step="any"
-                                placeholder="مثال: 500000"
-                                value={withdrawForm.data.amount}
-                                onChange={(e) => withdrawForm.setData('amount', e.target.value)}
-                                required
-                                className="font-mono text-left h-9"
-                                dir="ltr"
-                            />
-                        </div>
-
-                        <div className="space-y-1.5 text-right">
-                            <Label className="text-xs font-semibold">البيان والسبب</Label>
-                            <Input
-                                placeholder="مثال: سحب نقدي لعهدة مؤقتة"
-                                value={withdrawForm.data.description}
-                                onChange={(e) => withdrawForm.setData('description', e.target.value)}
-                                required
-                                className="h-9 text-xs"
-                            />
-                        </div>
-
-                        <DialogFooter className="gap-2 sm:gap-0 pt-2 flex-col-reverse sm:flex-row">
-                            <Button type="button" variant="outline" onClick={() => setWithdrawOpen(false)} className="w-full sm:w-auto h-9 text-xs">
-                                إلغاء
-                            </Button>
-                            <Button type="submit" variant="destructive" disabled={withdrawForm.processing} className="w-full sm:w-auto h-9 text-xs">
-                                {withdrawForm.processing ? 'جاري الحفظ...' : 'تأكيد السحب'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
-
-            {/* 3. Modal: Transfer */}
-            <Dialog open={transferOpen} onOpenChange={setTransferOpen}>
-                <DialogContent className="w-[95vw] sm:max-w-md p-4 sm:p-6" dir="rtl">
-                    <DialogHeader>
-                        <DialogTitle className="text-base font-bold flex items-center gap-2">
-                            <ArrowLeftRight className="h-4 w-4 text-blue-600" />
-                            <span>تحويل مالي بين الصناديق والبنوك</span>
-                        </DialogTitle>
-                        <DialogDescription className="text-xs">
-                            نقل أموال من كاش إلى بنك أو العكس مع تحديث كلا الرصيدين فوراً
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <form onSubmit={handleTransfer} className="space-y-4">
-                        <div className="p-3 rounded-lg bg-muted/40 border border-border/80 space-y-2">
-                            <span className="text-xs font-bold text-foreground">الجهة المحوّل منها (المصدر):</span>
-                            <div className="grid grid-cols-2 gap-2">
-                                <select
-                                    value={transferForm.data.from_type}
-                                    onChange={(e) => transferForm.setData('from_type', e.target.value)}
-                                    className="h-9 px-2 rounded-md border border-border bg-background text-xs"
-                                >
-                                    <option value="fund">صندوق نقدي</option>
-                                    <option value="bank">حساب بنكي</option>
-                                </select>
-
-                                <select
-                                    value={transferForm.data.from_id}
-                                    onChange={(e) => transferForm.setData('from_id', Number(e.target.value))}
-                                    className="h-9 px-2 rounded-md border border-border bg-background text-xs"
-                                >
-                                    {transferForm.data.from_type === 'fund'
-                                        ? funds.map((f) => (
-                                              <option key={f.id} value={f.id}>
-                                                  {f.name} ({Number(f.balance).toLocaleString()})
-                                              </option>
-                                          ))
-                                        : banks.map((b) => (
-                                              <option key={b.id} value={b.id}>
-                                                  {b.name} ({Number(b.balance).toLocaleString()})
-                                              </option>
-                                          ))}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="p-3 rounded-lg bg-muted/40 border border-border/80 space-y-2">
-                            <span className="text-xs font-bold text-foreground">الجهة المحوّل إليها (المستلم):</span>
-                            <div className="grid grid-cols-2 gap-2">
-                                <select
-                                    value={transferForm.data.to_type}
-                                    onChange={(e) => transferForm.setData('to_type', e.target.value)}
-                                    className="h-9 px-2 rounded-md border border-border bg-background text-xs"
-                                >
-                                    <option value="bank">حساب بنكي</option>
-                                    <option value="fund">صندوق نقدي</option>
-                                </select>
-
-                                <select
-                                    value={transferForm.data.to_id}
-                                    onChange={(e) => transferForm.setData('to_id', Number(e.target.value))}
-                                    className="h-9 px-2 rounded-md border border-border bg-background text-xs"
-                                >
-                                    {transferForm.data.to_type === 'fund'
-                                        ? funds.map((f) => (
-                                              <option key={f.id} value={f.id}>
-                                                  {f.name} ({Number(f.balance).toLocaleString()})
-                                              </option>
-                                          ))
-                                        : banks.map((b) => (
-                                              <option key={b.id} value={b.id}>
-                                                  {b.name} ({Number(b.balance).toLocaleString()})
-                                              </option>
-                                          ))}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="space-y-1.5 text-right">
-                            <Label className="text-xs font-semibold">المبلغ المحول</Label>
-                            <Input
-                                type="number"
-                                step="any"
-                                placeholder="مثال: 2000000"
-                                value={transferForm.data.amount}
-                                onChange={(e) => transferForm.setData('amount', e.target.value)}
-                                required
-                                className="font-mono text-left h-9"
-                                dir="ltr"
-                            />
-                        </div>
-
-                        <div className="space-y-1.5 text-right">
-                            <Label className="text-xs font-semibold">البيان</Label>
-                            <Input
-                                placeholder="مثال: إيداع كاش الصندوق في الحساب البنكي"
-                                value={transferForm.data.description}
-                                onChange={(e) => transferForm.setData('description', e.target.value)}
-                                required
-                                className="h-9 text-xs"
-                            />
-                        </div>
-
-                        <DialogFooter className="gap-2 sm:gap-0 pt-2 flex-col-reverse sm:flex-row">
-                            <Button type="button" variant="outline" onClick={() => setTransferOpen(false)} className="w-full sm:w-auto h-9 text-xs">
-                                إلغاء
-                            </Button>
-                            <Button type="submit" disabled={transferForm.processing} className="w-full sm:w-auto h-9 text-xs">
-                                {transferForm.processing ? 'جاري التحويل...' : 'تأكيد التحويل'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
-
-            {/* Modal: Create New Fund (IQD or USD) */}
-            <Dialog open={createFundOpen} onOpenChange={setCreateFundOpen}>
                 <DialogContent className="sm:max-w-md" dir="rtl">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <PlusCircle className="h-5 w-5 text-primary" />
-                            <span>إضافة صندوق نقدي جديد (خزينة)</span>
-                        </DialogTitle>
-                        <DialogDescription className="text-xs">
-                            حدد اسم الصندوق وعملته (دينار عراقي أو دولار أمريكي) ونوعه
-                        </DialogDescription>
-                    </DialogHeader>
+                    <form onSubmit={handleWithdrawSubmit}>
+                        <DialogHeader>
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-950/40">
+                                    <ArrowUpRight className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <DialogTitle className="text-base font-bold">سحب من الخزنة</DialogTitle>
+                                    <DialogDescription className="text-xs">
+                                        تسجيل عملية سحب نقدي مباشر من رصيد الخزنة.
+                                    </DialogDescription>
+                                </div>
+                            </div>
+                        </DialogHeader>
 
-                    <form onSubmit={handleCreateFund} className="space-y-3.5">
-                        <div className="space-y-1.5">
-                            <Label htmlFor="fund-name" className="text-xs font-semibold">
-                                اسم الصندوق <span className="text-destructive">*</span>
-                            </Label>
-                            <Input
-                                id="fund-name"
-                                placeholder="مثال: قاصة الدولار للفرع / صندوق المصاريف النثرية"
-                                value={createFundForm.data.name}
-                                onChange={(e) => createFundForm.setData('name', e.target.value)}
-                                required
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-4 py-4">
+                            {/* Currency Selector */}
                             <div className="space-y-1.5">
-                                <Label htmlFor="fund-code" className="text-xs font-semibold">
-                                    كود الصندوق <span className="text-destructive">*</span>
-                                </Label>
+                                <Label className="text-xs font-semibold">العملة *</Label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => withdrawForm.setData('currency', 'IQD')}
+                                        className={`p-2.5 rounded-lg border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                                            withdrawForm.data.currency === 'IQD'
+                                                ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 ring-2 ring-emerald-500/20'
+                                                : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
+                                        }`}
+                                    >
+                                        <Coins className="h-4 w-4" />
+                                        <span>دينار عراقي (IQD)</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => withdrawForm.setData('currency', 'USD')}
+                                        className={`p-2.5 rounded-lg border text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                                            withdrawForm.data.currency === 'USD'
+                                                ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 ring-2 ring-blue-500/20'
+                                                : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
+                                        }`}
+                                    >
+                                        <DollarSign className="h-4 w-4" />
+                                        <span>دولار أمريكي (USD)</span>
+                                    </button>
+                                </div>
+                                {withdrawForm.errors.currency && (
+                                    <p className="text-xs text-rose-500">{withdrawForm.errors.currency}</p>
+                                )}
+                            </div>
+
+                            {/* Available Balance Notice */}
+                            <div className="p-2.5 rounded-lg bg-muted/60 border border-border/80 flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">الرصيد المتاح الحالي في الخزنة:</span>
+                                <strong className="font-mono text-sm text-foreground">
+                                    {Number(currentWithdrawBalance).toLocaleString()} {withdrawForm.data.currency}
+                                </strong>
+                            </div>
+
+                            {/* Amount */}
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold">المبلغ المراد سحبه *</Label>
+                                <div className="relative">
+                                    <Input
+                                        type="number"
+                                        step="any"
+                                        min="0.01"
+                                        max={currentWithdrawBalance > 0 ? currentWithdrawBalance : undefined}
+                                        placeholder="0.00"
+                                        value={withdrawForm.data.amount}
+                                        onChange={(e) => withdrawForm.setData('amount', e.target.value)}
+                                        className="h-10 font-mono text-sm pl-16 text-left"
+                                        dir="ltr"
+                                        required
+                                    />
+                                    <span className="absolute left-3 top-2.5 text-xs font-bold text-muted-foreground">
+                                        {withdrawForm.data.currency}
+                                    </span>
+                                </div>
+                                {withdrawForm.errors.amount && (
+                                    <p className="text-xs text-rose-500">{withdrawForm.errors.amount}</p>
+                                )}
+                            </div>
+
+                            {/* Date */}
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold">تاريخ العملية *</Label>
                                 <Input
-                                    id="fund-code"
-                                    placeholder="FUND-USD-01"
-                                    dir="ltr"
-                                    className="font-mono text-xs uppercase"
-                                    value={createFundForm.data.code}
-                                    onChange={(e) => createFundForm.setData('code', e.target.value)}
+                                    type="date"
+                                    value={withdrawForm.data.transaction_date}
+                                    onChange={(e) => withdrawForm.setData('transaction_date', e.target.value)}
+                                    className="h-10 text-xs"
                                     required
                                 />
+                                {withdrawForm.errors.transaction_date && (
+                                    <p className="text-xs text-rose-500">{withdrawForm.errors.transaction_date}</p>
+                                )}
                             </div>
 
+                            {/* Description */}
                             <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold">العملة المعتمدة</Label>
-                                <select
-                                    className="w-full text-xs rounded-md border border-input bg-background p-2"
-                                    value={createFundForm.data.currency}
-                                    onChange={(e) => createFundForm.setData('currency', e.target.value)}
-                                >
-                                    <option value="IQD">دينار عراقي (IQD)</option>
-                                    <option value="USD">دولار أمريكي (USD $)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold">نوع الصندوق</Label>
-                                <select
-                                    className="w-full text-xs rounded-md border border-input bg-background p-2"
-                                    value={createFundForm.data.type}
-                                    onChange={(e) => createFundForm.setData('type', e.target.value as any)}
-                                >
-                                    <option value="sub">صندوق فرعي</option>
-                                    <option value="main">صندوق رئيسي</option>
-                                    <option value="petty_cash">مصاريف نثرية</option>
-                                </select>
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <Label htmlFor="fund-bal" className="text-xs font-semibold">
-                                    الرصيد الافتتاحي
-                                </Label>
-                                <Input
-                                    id="fund-bal"
-                                    type="number"
-                                    step="any"
-                                    placeholder="0"
-                                    dir="ltr"
-                                    className="font-mono text-xs"
-                                    value={createFundForm.data.initial_balance}
-                                    onChange={(e) => createFundForm.setData('initial_balance', e.target.value)}
+                                <Label className="text-xs font-semibold">سبب السحب / البيان *</Label>
+                                <Textarea
+                                    rows={3}
+                                    placeholder="اكتب سبب وتفاصيل هذا السحب..."
+                                    value={withdrawForm.data.description}
+                                    onChange={(e) => withdrawForm.setData('description', e.target.value)}
+                                    className="text-xs resize-none"
+                                    required
                                 />
+                                {withdrawForm.errors.description && (
+                                    <p className="text-xs text-rose-500">{withdrawForm.errors.description}</p>
+                                )}
                             </div>
                         </div>
 
-                        <div className="space-y-1.5">
-                            <Label htmlFor="fund-notes" className="text-xs font-semibold">ملاحظات</Label>
-                            <Input
-                                id="fund-notes"
-                                placeholder="ملاحظات حول موقع أو أمين الصندوق"
-                                value={createFundForm.data.notes}
-                                onChange={(e) => createFundForm.setData('notes', e.target.value)}
-                            />
-                        </div>
-
-                        <DialogFooter className="gap-2 sm:gap-0 pt-2">
-                            <Button type="button" variant="outline" onClick={() => setCreateFundOpen(false)}>
+                        <DialogFooter className="gap-2 sm:gap-0">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setWithdrawOpen(false)}
+                            >
                                 إلغاء
                             </Button>
-                            <Button type="submit" disabled={createFundForm.processing}>
-                                {createFundForm.processing ? 'جاري الإنشاء...' : 'حفظ الصندوق'}
+                            <Button
+                                type="submit"
+                                size="sm"
+                                disabled={withdrawForm.processing}
+                                className="bg-rose-600 hover:bg-rose-700 text-white"
+                            >
+                                {withdrawForm.processing ? 'جاري السحب...' : 'تأكيد السحب'}
                             </Button>
                         </DialogFooter>
                     </form>

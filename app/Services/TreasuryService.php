@@ -31,13 +31,13 @@ class TreasuryService
     /**
      * General Deposit into Fund or Bank
      */
-    public function deposit($target, float $amount, string $description, ?int $userId = null): TreasuryTransaction
+    public function deposit($target, float $amount, string $description, ?int $userId = null, ?string $transactionDate = null): TreasuryTransaction
     {
         if ($amount <= 0) {
             throw new Exception("يجب أن يكون مبلغ الإيداع أكبر من الصفر.");
         }
 
-        return DB::transaction(function () use ($target, $amount, $description, $userId) {
+        return DB::transaction(function () use ($target, $amount, $description, $userId, $transactionDate) {
             $locked = get_class($target)::where('id', $target->id)->lockForUpdate()->first();
 
             $before = (float) $locked->balance;
@@ -58,7 +58,7 @@ class TreasuryService
                 'balance_before' => $before,
                 'balance_after' => $after,
                 'description' => $description,
-                'transaction_date' => now(),
+                'transaction_date' => $transactionDate ? \Carbon\Carbon::parse($transactionDate) : now(),
                 'created_by' => $userId ?? auth()->id(),
             ]);
         });
@@ -67,13 +67,13 @@ class TreasuryService
     /**
      * General Withdrawal from Fund or Bank
      */
-    public function withdraw($source, float $amount, string $description, ?int $userId = null): TreasuryTransaction
+    public function withdraw($source, float $amount, string $description, ?int $userId = null, ?string $transactionDate = null): TreasuryTransaction
     {
         if ($amount <= 0) {
             throw new Exception("يجب أن يكون مبلغ السحب أكبر من الصفر.");
         }
 
-        return DB::transaction(function () use ($source, $amount, $description, $userId) {
+        return DB::transaction(function () use ($source, $amount, $description, $userId, $transactionDate) {
             $locked = get_class($source)::where('id', $source->id)->lockForUpdate()->first();
 
             $before = (float) $locked->balance;
@@ -97,7 +97,7 @@ class TreasuryService
                 'balance_before' => $before,
                 'balance_after' => $after,
                 'description' => $description,
-                'transaction_date' => now(),
+                'transaction_date' => $transactionDate ? \Carbon\Carbon::parse($transactionDate) : now(),
                 'created_by' => $userId ?? auth()->id(),
             ]);
         });

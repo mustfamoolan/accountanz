@@ -84,23 +84,9 @@ export default function AuthenticatedLayout({ children, header, activeNav = 'das
         },
         {
             key: 'treasury',
-            label: 'الصندوق الرئيسي والخزينة',
+            label: 'الخزنة',
             href: '/treasury',
             icon: Wallet,
-            roles: ['admin', 'accountant'],
-        },
-        {
-            key: 'banks',
-            label: 'البنوك والمصارف',
-            href: '/banks',
-            icon: CreditCard,
-            roles: ['admin', 'accountant'],
-        },
-        {
-            key: 'invoices',
-            label: 'الفواتير والمبيعات',
-            href: '/invoices',
-            icon: Receipt,
             roles: ['admin', 'accountant'],
         },
         {
@@ -112,7 +98,7 @@ export default function AuthenticatedLayout({ children, header, activeNav = 'das
         },
         {
             key: 'investors',
-            label: 'المستثمرين ورؤوس الأموال',
+            label: 'المستثمرون ورؤوس الأموال',
             href: '/investors',
             icon: TrendingUp,
             roles: ['admin', 'accountant', 'investor'],

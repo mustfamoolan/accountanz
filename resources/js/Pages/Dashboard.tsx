@@ -24,12 +24,15 @@ import {
     ArrowUpRight,
     ArrowDownLeft,
     Coins,
+    DollarSign,
 } from 'lucide-react';
 
 interface Metrics {
-    totalCash: number;
-    totalBanks: number;
-    totalLiquidity: number;
+    vaultBalanceIqd?: number;
+    vaultBalanceUsd?: number;
+    totalCash?: number;
+    totalBanks?: number;
+    totalLiquidity?: number;
     totalInvestorsCapital: number;
     totalInvestorsProfit: number;
 }
@@ -140,7 +143,7 @@ export default function Dashboard({ metrics, recentTransactions = [] }: Props) {
                 {/* 1. Unified PageHeader */}
                 <PageHeader
                     title={`مرحباً بك، ${user?.name || 'المستخدم'}`}
-                    description={`إجمالي السيولة الحالية المتاحة (كاش + بنوك): ${Number(metrics?.totalLiquidity || 0).toLocaleString()} د.ع`}
+                    description="لوحة التحكم ومتابعة أرصدة الخزنة والمستثمرين والجرد المالي"
                     icon={Coins}
                     badge={
                         <Badge variant="secondary" className="text-xs">
@@ -156,13 +159,13 @@ export default function Dashboard({ metrics, recentTransactions = [] }: Props) {
                             <Link href="/treasury">
                                 <Button size="sm" className="gap-1.5 text-xs h-9">
                                     <Wallet className="h-4 w-4" />
-                                    <span>إدارة الصندوق</span>
+                                    <span>الخزنة</span>
                                 </Button>
                             </Link>
-                            <Link href="/banks">
+                            <Link href="/inventories">
                                 <Button size="sm" variant="outline" className="gap-1.5 text-xs h-9">
-                                    <Landmark className="h-4 w-4 text-blue-600" />
-                                    <span>البنوك</span>
+                                    <Coins className="h-4 w-4 text-emerald-600" />
+                                    <span>الجرد والميزانية</span>
                                 </Button>
                             </Link>
                             <Link href="/investors">
@@ -178,19 +181,19 @@ export default function Dashboard({ metrics, recentTransactions = [] }: Props) {
                 {/* 2. Unified Financial StatGrid */}
                 <StatGrid columns={4}>
                     <StatCard
-                        title="رصيد الصناديق النقدية (الكاش)"
-                        value={metrics?.totalCash || 0}
+                        title="رصيد الخزنة (دينار)"
+                        value={metrics?.vaultBalanceIqd ?? metrics?.totalCash ?? 0}
                         color="emerald"
                         icon={Wallet}
-                        description="نقد متوفر في الخزائن المركزية"
+                        description="نقد متوفر في الخزنة بالدينار"
                     />
 
                     <StatCard
-                        title="أرصدة الحسابات البنكية"
-                        value={metrics?.totalBanks || 0}
+                        title="رصيد الخزنة (دولار)"
+                        value={metrics?.vaultBalanceUsd ?? 0}
                         color="blue"
-                        icon={Landmark}
-                        description="ودائع جارية في الحسابات المصرفية"
+                        icon={DollarSign}
+                        description="نقد متوفر في الخزنة بالدولار"
                     />
 
                     <StatCard
@@ -219,15 +222,15 @@ export default function Dashboard({ metrics, recentTransactions = [] }: Props) {
                                     <Wallet className="h-5 w-5" />
                                 </div>
                                 <div>
-                                    <CardTitle className="text-sm font-bold">حركات الخزينة والصناديق</CardTitle>
-                                    <CardDescription className="text-xs">سحب وإيداع فوري وتحويلات</CardDescription>
+                                    <CardTitle className="text-sm font-bold">الخزنة</CardTitle>
+                                    <CardDescription className="text-xs">إيداع وسحب مباشر بالدينار والدولار</CardDescription>
                                 </div>
                             </div>
                         </CardHeader>
                         <CardContent>
                             <Link href="/treasury">
                                 <Button variant="outline" size="sm" className="w-full text-xs gap-1">
-                                    <span>فتح الصناديق والخزينة</span>
+                                    <span>فتح الخزنة</span>
                                     <ArrowUpRight className="h-3.5 w-3.5" />
                                 </Button>
                             </Link>
@@ -238,18 +241,18 @@ export default function Dashboard({ metrics, recentTransactions = [] }: Props) {
                         <CardHeader className="pb-3">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40">
-                                    <Landmark className="h-5 w-5" />
+                                    <Coins className="h-5 w-5" />
                                 </div>
                                 <div>
-                                    <CardTitle className="text-sm font-bold">الحسابات المصرفية</CardTitle>
-                                    <CardDescription className="text-xs">متابعة أرصدة وكشوفات البنوك</CardDescription>
+                                    <CardTitle className="text-sm font-bold">الجرد والميزانية</CardTitle>
+                                    <CardDescription className="text-xs">كشف الجرد الدوري ومطابقة الأرصدة</CardDescription>
                                 </div>
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <Link href="/banks">
+                            <Link href="/inventories">
                                 <Button variant="outline" size="sm" className="w-full text-xs gap-1">
-                                    <span>عرض وإدارة المصارف</span>
+                                    <span>عرض الجرد والميزانية</span>
                                     <ArrowUpRight className="h-3.5 w-3.5" />
                                 </Button>
                             </Link>
