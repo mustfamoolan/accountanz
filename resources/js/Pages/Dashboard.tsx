@@ -165,7 +165,7 @@ export default function Dashboard({ metrics, recentTransactions = [] }: Props) {
                             <Link href="/inventories">
                                 <Button size="sm" variant="outline" className="gap-1.5 text-xs h-9">
                                     <Coins className="h-4 w-4 text-emerald-600" />
-                                    <span>الجرد والميزانية</span>
+                                    <span>الجرد</span>
                                 </Button>
                             </Link>
                             <Link href="/investors">
@@ -244,15 +244,15 @@ export default function Dashboard({ metrics, recentTransactions = [] }: Props) {
                                     <Coins className="h-5 w-5" />
                                 </div>
                                 <div>
-                                    <CardTitle className="text-sm font-bold">الجرد والميزانية</CardTitle>
-                                    <CardDescription className="text-xs">كشف الجرد الدوري ومطابقة الأرصدة</CardDescription>
+                                    <CardTitle className="text-sm font-bold">الجرد</CardTitle>
+                                    <CardDescription className="text-xs">سجل الجرد الدوري ومطابقة الأرصدة</CardDescription>
                                 </div>
                             </div>
                         </CardHeader>
                         <CardContent>
                             <Link href="/inventories">
                                 <Button variant="outline" size="sm" className="w-full text-xs gap-1">
-                                    <span>عرض الجرد والميزانية</span>
+                                    <span>عرض كشوفات الجرد</span>
                                     <ArrowUpRight className="h-3.5 w-3.5" />
                                 </Button>
                             </Link>

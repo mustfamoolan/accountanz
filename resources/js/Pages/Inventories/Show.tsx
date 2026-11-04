@@ -13,11 +13,9 @@ import {
     Scale,
     Wallet,
     Calendar,
-    User,
-    CheckCircle2,
-    AlertCircle,
     CreditCard,
-    Layers,
+    Calculator,
+    Info,
 } from 'lucide-react';
 
 interface Item {
@@ -44,16 +42,6 @@ interface PeriodicInventory {
     net_worth: number | string;
     previous_net_worth: number | string;
     inventory_profit: number | string;
-    mohammed_opening_cash: number | string;
-    mohammed_outflow: number | string;
-    mohammed_inflow: number | string;
-    mohammed_expenses: number | string;
-    mohammed_assets: number | string;
-    mohammed_cash_present: number | string;
-    mohammed_calculated_cash: number | string;
-    mohammed_difference: number | string;
-    mohammed_previous_net_worth: number | string;
-    mohammed_current_net_worth: number | string;
     notes?: string;
     creator?: { name: string };
     created_at: string;
@@ -90,7 +78,7 @@ export default function InventoryShow({ inventory }: Props) {
             <div className="space-y-6" dir="rtl">
                 {/* 1. Page Header */}
                 <PageHeader
-                    title={inventory.title || `كشف جرد وميزانية #${inventory.id}`}
+                    title={inventory.title || `كشف جرد #${inventory.id}`}
                     description={`تاريخ الجرد: ${new Date(inventory.inventory_date).toLocaleDateString('ar-IQ')} | المسؤول: ${inventory.creator?.name || 'النظام'}`}
                     icon={FileSpreadsheet}
                     actions={
@@ -125,320 +113,262 @@ export default function InventoryShow({ inventory }: Props) {
                     }
                 />
 
-                {/* 2. Top Stats Grid (Clean Unified StatGrid) */}
+                {/* 2. Top Stats Grid */}
                 <StatGrid columns={4}>
                     <StatCard
-                        title="الموجود الكلي (الصافي)"
-                        value={inventory.net_worth}
-                        currency="د.ع"
-                        color="primary"
-                        icon={Scale}
-                        description="م/ الموجودات - م/ المطلوبات"
-                    />
-                    <StatCard
-                        title="ربح آخر جرد دوري"
-                        value={inventory.inventory_profit}
-                        currency="د.ع"
-                        color={Number(inventory.inventory_profit) >= 0 ? 'emerald' : 'muted'}
-                        icon={TrendingUp}
-                        description="الموجود الكلي الحالي - السابق"
-                    />
-                    <StatCard
-                        title="مجموع الموجودات"
+                        title="الرصيد المتوفر"
                         value={inventory.total_assets}
                         currency="د.ع"
                         color="blue"
                         icon={Wallet}
-                        description="كاش حقيقي + مصارف + نطلب"
+                        description="صندوق + مصارف + نطلب"
                     />
                     <StatCard
-                        title="مجموع المطلوبات"
+                        title="مجموع الالتزامات"
                         value={inventory.total_liabilities}
                         currency="د.ع"
                         color="amber"
                         icon={CreditCard}
-                        description="مطلوبين + التزامات كمرك"
+                        description="مطلوبين + كمرك"
+                    />
+                    <StatCard
+                        title="الربح قبل خصم السابق"
+                        value={inventory.net_worth}
+                        currency="د.ع"
+                        color="primary"
+                        icon={Scale}
+                        description="الرصيد المتوفر - الالتزامات"
+                    />
+                    <StatCard
+                        title="ربح الجرد الجديد"
+                        value={inventory.inventory_profit}
+                        currency="د.ع"
+                        color={Number(inventory.inventory_profit) >= 0 ? 'emerald' : 'muted'}
+                        icon={TrendingUp}
+                        description="الربح الحالي - ربح آخر جرد"
                     />
                 </StatGrid>
 
-                {/* 3. Detailed Items Table (Full Width) */}
+                {/* 3. Detailed Items Table */}
                 <Card className="shadow-xs border-border overflow-hidden">
-                            <CardHeader className="p-4 bg-muted/30 border-b border-border">
-                                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                    <FileSpreadsheet className="h-4 w-4 text-primary" />
-                                    <span>بنود ومفردات الجرد التفصيلية</span>
-                                </CardTitle>
-                                {inventory.notes && (
-                                    <CardDescription className="text-xs pt-1 text-muted-foreground">
-                                        ملاحظات: {inventory.notes}
-                                    </CardDescription>
-                                )}
-                            </CardHeader>
+                    <CardHeader className="p-4 bg-muted/30 border-b border-border">
+                        <CardTitle className="text-sm font-bold flex items-center gap-2">
+                            <FileSpreadsheet className="h-4 w-4 text-primary" />
+                            <span>جدول بنود ومفردات الجرد</span>
+                        </CardTitle>
+                        {inventory.notes && (
+                            <CardDescription className="text-xs pt-1 text-muted-foreground">
+                                ملاحظات: {inventory.notes}
+                            </CardDescription>
+                        )}
+                    </CardHeader>
 
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-xs border-collapse">
-                                    <thead>
-                                        <tr className="border-b border-border bg-muted/40 text-[11px] font-semibold text-muted-foreground">
-                                            <th className="p-2.5 w-9 text-center">#</th>
-                                            <th className="p-2.5 text-center min-w-[100px]">
-                                                <span className="font-bold text-foreground">نطلب (د.ع)</span>
-                                            </th>
-                                            <th className="p-2.5 text-center min-w-[130px]">تفاصيل المدين</th>
-                                            <th className="p-2.5 text-center min-w-[100px]">
-                                                <span className="font-bold text-amber-600 dark:text-amber-400">مطلوبين (د.ع)</span>
-                                            </th>
-                                            <th className="p-2.5 text-center min-w-[130px]">تفاصيل الدائن</th>
-                                            <th className="p-2.5 text-center min-w-[100px]">
-                                                <span className="font-bold text-blue-600 dark:text-blue-400">كمرك (د.ع)</span>
-                                            </th>
-                                            <th className="p-2.5 text-center min-w-[130px]">تفاصيل الكمرك</th>
-                                            <th className="p-2.5 text-center min-w-[100px]">
-                                                <span className="font-bold text-emerald-600 dark:text-emerald-400">نثريات (د.ع)</span>
-                                            </th>
-                                            <th className="p-2.5 text-center min-w-[130px]">تفاصيل النثرية</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border/50">
-                                        {Array.from({ length: maxRows }).map((_, idx) => {
-                                            const rec = receivables[idx];
-                                            const pay = payables[idx];
-                                            const cus = customs[idx];
-                                            const exp = expenses[idx];
-
-                                            return (
-                                                <tr key={idx} className="hover:bg-muted/20 transition-colors">
-                                                    <td className="p-2.5 text-center text-muted-foreground font-mono text-[11px] bg-muted/10">
-                                                        {idx + 1}
-                                                    </td>
-                                                    <td className="p-2.5 text-right font-mono font-bold" dir="ltr">
-                                                        {rec ? Number(rec.amount).toLocaleString() : '—'}
-                                                    </td>
-                                                    <td className="p-2.5 text-muted-foreground">{rec?.details || '—'}</td>
-
-                                                    <td className="p-2.5 text-right font-mono font-bold text-amber-600 dark:text-amber-400" dir="ltr">
-                                                        {pay ? Number(pay.amount).toLocaleString() : '—'}
-                                                    </td>
-                                                    <td className="p-2.5 text-muted-foreground">{pay?.details || '—'}</td>
-
-                                                    <td className="p-2.5 text-right font-mono font-bold text-blue-600 dark:text-blue-400" dir="ltr">
-                                                        {cus ? Number(cus.amount).toLocaleString() : '—'}
-                                                    </td>
-                                                    <td className="p-2.5 text-muted-foreground">{cus?.details || '—'}</td>
-
-                                                    <td className="p-2.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400" dir="ltr">
-                                                        {exp ? Number(exp.amount).toLocaleString() : '—'}
-                                                    </td>
-                                                    <td className="p-2.5 text-muted-foreground">{exp?.details || '—'}</td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                    <tfoot>
-                                        <tr className="bg-muted/50 font-bold text-xs border-t-2 border-border">
-                                            <td className="p-3 text-center">المجموع</td>
-                                            <td className="p-3 text-right font-mono" dir="ltr">
-                                                {Number(inventory.total_receivables).toLocaleString()} د.ع
-                                            </td>
-                                            <td></td>
-                                            <td className="p-3 text-right font-mono text-amber-600 dark:text-amber-400" dir="ltr">
-                                                {Number(inventory.total_payables).toLocaleString()} د.ع
-                                            </td>
-                                            <td></td>
-                                            <td className="p-3 text-right font-mono text-blue-600 dark:text-blue-400" dir="ltr">
-                                                {Number(inventory.total_customs).toLocaleString()} د.ع
-                                            </td>
-                                            <td></td>
-                                            <td className="p-3 text-right font-mono text-emerald-600 dark:text-emerald-400" dir="ltr">
-                                                {Number(inventory.total_expenses).toLocaleString()} د.ع
-                                            </td>
-                                            <td></td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-                        </Card>
-
-                {/* 4. Accounting Panels Below the Table */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-                    {/* Card 1: خلاصة الميزانية العمومية */}
-                    <Card className="shadow-xs border-border">
-                            <CardHeader className="pb-3 pt-4 px-4 border-b border-border bg-muted/20">
-                                <CardTitle className="text-sm font-bold flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <Scale className="h-4 w-4 text-primary" />
-                                        <span>خلاصة الميزانية العمومية</span>
-                                    </div>
-                                    <Badge variant="outline" className="text-[10px] font-mono">
-                                        كشف معتمد
-                                    </Badge>
-                                </CardTitle>
-                            </CardHeader>
-
-                            <div className="p-4 space-y-3 text-xs">
-                                <div className="space-y-2 pb-3 border-b border-border/60">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-muted-foreground">نطلب (المدينون):</span>
-                                        <MoneyDisplay amount={inventory.total_receivables} currency="د.ع" size="sm" />
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-muted-foreground">مطلوبين (الدائنون):</span>
-                                        <MoneyDisplay amount={inventory.total_payables} currency="د.ع" size="sm" variant="negative" />
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-muted-foreground">كمرك مستحق:</span>
-                                        <MoneyDisplay amount={inventory.total_customs} currency="د.ع" size="sm" variant="blue" />
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-muted-foreground">نثريات تشغيلية:</span>
-                                        <MoneyDisplay amount={inventory.total_expenses} currency="د.ع" size="sm" variant="emerald" />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2 pb-3 border-b border-border/60">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-muted-foreground font-semibold">كاش حقيقي (صناديق):</span>
-                                        <MoneyDisplay amount={inventory.actual_cash} currency="د.ع" size="sm" />
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-muted-foreground font-semibold">رصيد المصارف:</span>
-                                        <MoneyDisplay amount={inventory.bank_balance} currency="د.ع" size="sm" />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2 pb-3 border-b border-border/60">
-                                    <div className="flex justify-between items-center font-semibold">
-                                        <span>م/ الموجودات (كاش+مصارف+نطلب):</span>
-                                        <MoneyDisplay amount={inventory.total_assets} currency="د.ع" size="md" />
-                                    </div>
-                                    <div className="flex justify-between items-center font-semibold text-rose-600 dark:text-rose-400">
-                                        <span>م/ المطلوبات (مطلوبين+كمرك):</span>
-                                        <MoneyDisplay amount={inventory.total_liabilities} currency="د.ع" size="md" variant="negative" />
-                                    </div>
-                                    <div className="flex justify-between items-center text-muted-foreground pt-1">
-                                        <span>موجود كلي سابق:</span>
-                                        <MoneyDisplay amount={inventory.previous_net_worth} currency="د.ع" size="sm" variant="muted" />
-                                    </div>
-                                </div>
-
-                                {/* بطاقات النتائج الصافية الختامية */}
-                                <div className="pt-2 space-y-2">
-                                    <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-between">
-                                        <div>
-                                            <span className="text-[11px] font-bold text-primary block">
-                                                الموجود الكلي (الصافي)
-                                            </span>
-                                            <span className="text-[10px] text-muted-foreground">صافي رأس المال والميزانية</span>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-xs border-collapse">
+                            <thead>
+                                <tr className="border-b border-border bg-muted/40 text-[11px] font-semibold text-muted-foreground">
+                                    <th className="p-2.5 w-9 text-center">#</th>
+                                    <th className="p-2.5 text-center min-w-[100px]">
+                                        <span className="font-bold text-foreground">نطلب (د.ع)</span>
+                                    </th>
+                                    <th className="p-2.5 text-center min-w-[130px]">تفاصيل المدين</th>
+                                    <th className="p-2.5 text-center min-w-[100px]">
+                                        <span className="font-bold text-amber-600 dark:text-amber-400">مطلوبين (د.ع)</span>
+                                    </th>
+                                    <th className="p-2.5 text-center min-w-[130px]">تفاصيل الدائن</th>
+                                    <th className="p-2.5 text-center min-w-[100px]">
+                                        <span className="font-bold text-blue-600 dark:text-blue-400">كمرك (د.ع)</span>
+                                    </th>
+                                    <th className="p-2.5 text-center min-w-[130px]">تفاصيل الكمرك</th>
+                                    <th className="p-2.5 text-center min-w-[100px]">
+                                        <div className="inline-flex flex-col items-center">
+                                            <span className="font-bold text-emerald-600 dark:text-emerald-400">نثريات (د.ع)</span>
+                                            <span className="text-[9px] text-muted-foreground font-normal">(توثيق فقط)</span>
                                         </div>
-                                        <span className="font-mono text-base font-bold text-primary" dir="ltr">
-                                            {Number(inventory.net_worth).toLocaleString()} د.ع
-                                        </span>
-                                    </div>
+                                    </th>
+                                    <th className="p-2.5 text-center min-w-[130px]">تفاصيل النثرية</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border/50">
+                                {Array.from({ length: maxRows }).map((_, idx) => {
+                                    const rec = receivables[idx];
+                                    const pay = payables[idx];
+                                    const cus = customs[idx];
+                                    const exp = expenses[idx];
 
-                                    <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
-                                        <div>
-                                            <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 block">
-                                                ربح آخر جرد دوري
-                                            </span>
-                                            <span className="text-[10px] text-muted-foreground">الفارق المالي المحقق</span>
-                                        </div>
-                                        <MoneyDisplay
-                                            amount={inventory.inventory_profit}
-                                            currency="د.ع"
-                                            size="md"
-                                            variant={Number(inventory.inventory_profit) >= 0 ? 'emerald' : 'negative'}
-                                            showSign
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </Card>
+                                    return (
+                                        <tr key={idx} className="hover:bg-muted/20 transition-colors">
+                                            <td className="p-2.5 text-center text-muted-foreground font-mono text-[11px] bg-muted/10">
+                                                {idx + 1}
+                                            </td>
+                                            <td className="p-2.5 text-right font-mono font-bold" dir="ltr">
+                                                {rec ? Number(rec.amount).toLocaleString() : '—'}
+                                            </td>
+                                            <td className="p-2.5 text-muted-foreground">{rec?.details || '—'}</td>
 
-                        {/* Card 2: حساب خاص محمد */}
-                        <Card className="shadow-xs border-border">
-                            <CardHeader className="pb-3 pt-4 px-4 border-b border-border bg-muted/20">
-                                <CardTitle className="text-sm font-bold flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <User className="h-4 w-4 text-primary" />
-                                        <span>حساب خاص محمد (العهدة والاستثمار)</span>
-                                    </div>
-                                    <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">
-                                        مستثمر دائم
-                                    </Badge>
-                                </CardTitle>
-                            </CardHeader>
+                                            <td className="p-2.5 text-right font-mono font-bold text-amber-600 dark:text-amber-400" dir="ltr">
+                                                {pay ? Number(pay.amount).toLocaleString() : '—'}
+                                            </td>
+                                            <td className="p-2.5 text-muted-foreground">{pay?.details || '—'}</td>
 
-                            <div className="p-4 space-y-2.5 text-xs">
-                                <div className="flex justify-between items-center py-1">
-                                    <span className="text-muted-foreground">كاش محمد آخر جرد (الافتتاحي):</span>
-                                    <MoneyDisplay amount={inventory.mohammed_opening_cash} currency="د.ع" size="sm" />
-                                </div>
-                                <div className="flex justify-between items-center py-1">
-                                    <span className="text-muted-foreground">م/ صادر (مصروفات):</span>
-                                    <MoneyDisplay amount={inventory.mohammed_outflow} currency="د.ع" size="sm" variant="negative" />
-                                </div>
-                                <div className="flex justify-between items-center py-1">
-                                    <span className="text-muted-foreground">م/ وارد (مقبوضات):</span>
-                                    <MoneyDisplay amount={inventory.mohammed_inflow} currency="د.ع" size="sm" variant="positive" />
-                                </div>
-                                <div className="flex justify-between items-center py-1">
-                                    <span className="text-muted-foreground">نثريات محمد:</span>
-                                    <MoneyDisplay amount={inventory.mohammed_expenses} currency="د.ع" size="sm" variant="negative" />
-                                </div>
-                                <div className="flex justify-between items-center py-1 pb-2 border-b border-border/60">
-                                    <span className="text-muted-foreground">الموجودات التابعة:</span>
-                                    <MoneyDisplay amount={inventory.mohammed_assets} currency="د.ع" size="sm" />
-                                </div>
+                                            <td className="p-2.5 text-right font-mono font-bold text-blue-600 dark:text-blue-400" dir="ltr">
+                                                {cus ? Number(cus.amount).toLocaleString() : '—'}
+                                            </td>
+                                            <td className="p-2.5 text-muted-foreground">{cus?.details || '—'}</td>
 
-                                <div className="flex justify-between items-center p-2 rounded-md bg-muted/40 border border-border/60">
-                                    <span className="text-muted-foreground font-semibold">الكاش المحسوب:</span>
-                                    <MoneyDisplay amount={inventory.mohammed_calculated_cash} currency="د.ع" size="sm" />
-                                </div>
-
-                                <div className="flex justify-between items-center p-2.5 rounded-md bg-muted/20 border border-border/80">
-                                    <span className="font-bold text-foreground">الكاش الموجود فعلياً:</span>
-                                    <MoneyDisplay amount={inventory.mohammed_cash_present} currency="د.ع" size="md" variant="positive" />
-                                </div>
-
-                                {/* شارة التطابق الذكية */}
-                                <div
-                                    className={`p-2.5 rounded-lg border flex items-center justify-between text-xs font-bold ${
-                                        Number(inventory.mohammed_difference) === 0
-                                            ? 'bg-muted/40 border-border text-foreground'
-                                            : Number(inventory.mohammed_difference) > 0
-                                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                                            : 'bg-destructive/10 border-destructive/20 text-destructive'
-                                    }`}
-                                >
-                                    <span className="flex items-center gap-1.5">
-                                        {Number(inventory.mohammed_difference) === 0 ? (
-                                            <>
-                                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                                                <span>العهدة مطابقة تماماً</span>
-                                            </>
-                                        ) : Number(inventory.mohammed_difference) > 0 ? (
-                                            <>
-                                                <TrendingUp className="h-4 w-4 text-emerald-600" />
-                                                <span>زيادة نقدية في العهدة</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <AlertCircle className="h-4 w-4 text-destructive" />
-                                                <span>عجز نقدي في العهدة</span>
-                                            </>
-                                        )}
-                                    </span>
-                                    <MoneyDisplay
-                                        amount={inventory.mohammed_difference}
-                                        currency="د.ع"
-                                        size="sm"
-                                        variant={Number(inventory.mohammed_difference) >= 0 ? 'positive' : 'negative'}
-                                        showSign
-                                    />
-                                </div>
-                            </div>
-                        </Card>
+                                            <td className="p-2.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400" dir="ltr">
+                                                {exp ? Number(exp.amount).toLocaleString() : '—'}
+                                            </td>
+                                            <td className="p-2.5 text-muted-foreground">{exp?.details || '—'}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                            <tfoot>
+                                <tr className="bg-muted/50 font-bold text-xs border-t-2 border-border">
+                                    <td className="p-3 text-center">المجموع</td>
+                                    <td className="p-3 text-right font-mono" dir="ltr">
+                                        {Number(inventory.total_receivables).toLocaleString()} د.ع
+                                    </td>
+                                    <td></td>
+                                    <td className="p-3 text-right font-mono text-amber-600 dark:text-amber-400" dir="ltr">
+                                        {Number(inventory.total_payables).toLocaleString()} د.ع
+                                    </td>
+                                    <td></td>
+                                    <td className="p-3 text-right font-mono text-blue-600 dark:text-blue-400" dir="ltr">
+                                        {Number(inventory.total_customs).toLocaleString()} د.ع
+                                    </td>
+                                    <td></td>
+                                    <td className="p-3 text-right font-mono text-emerald-600 dark:text-emerald-400" dir="ltr">
+                                        {Number(inventory.total_expenses).toLocaleString()} د.ع
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
                     </div>
+                </Card>
+
+                {/* 4. Accounting Summary Panels Below the Table */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+                    {/* Right Card: الأرصدة اليدوية المسجلة */}
+                    <Card className="shadow-xs border-border">
+                        <CardHeader className="pb-3 pt-4 px-4 border-b border-border bg-muted/20">
+                            <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                <Wallet className="h-4 w-4 text-primary" />
+                                <span>الأرصدة المسجلة عند الجرد</span>
+                            </CardTitle>
+                        </CardHeader>
+
+                        <CardContent className="p-4 space-y-3 text-xs">
+                            <div className="flex justify-between items-center py-1 border-b border-border/60">
+                                <span className="text-muted-foreground font-semibold">رصيد الصندوق (الكاش):</span>
+                                <MoneyDisplay amount={inventory.actual_cash} currency="د.ع" size="sm" />
+                            </div>
+
+                            <div className="flex justify-between items-center py-1 border-b border-border/60">
+                                <span className="text-muted-foreground font-semibold">رصيد المصارف:</span>
+                                <MoneyDisplay amount={inventory.bank_balance} currency="د.ع" size="sm" />
+                            </div>
+
+                            <div className="flex justify-between items-center py-1 border-b border-border/60">
+                                <span className="text-muted-foreground font-semibold">ربح آخر جرد سابق:</span>
+                                <span className="font-mono font-semibold text-muted-foreground">
+                                    {Number(inventory.previous_net_worth || 0).toLocaleString()} د.ع
+                                </span>
+                            </div>
+
+                            <div className="flex justify-between items-center py-1 text-muted-foreground">
+                                <span>نثريات تشغيلية (توثيق فقط):</span>
+                                <MoneyDisplay amount={inventory.total_expenses} currency="د.ع" size="sm" variant="muted" />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Left Card: خلاصة معادلة الجرد */}
+                    <Card className="shadow-xs border-border">
+                        <CardHeader className="pb-3 pt-4 px-4 border-b border-border bg-muted/20">
+                            <CardTitle className="text-sm font-bold flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Calculator className="h-4 w-4 text-primary" />
+                                    <span>تفصيل معادلة الجرد والأرباح</span>
+                                </div>
+                                <Badge variant="outline" className="text-[10px] font-mono">
+                                    كشف معتمد
+                                </Badge>
+                            </CardTitle>
+                        </CardHeader>
+
+                        <CardContent className="p-4 space-y-3 text-xs">
+                            {/* 1. الرصيد المتوفر */}
+                            <div className="p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-900/40 flex justify-between items-center">
+                                <div>
+                                    <span className="font-bold text-blue-900 dark:text-blue-300 block">
+                                        1. الرصيد المتوفر:
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                        كاش ({Number(inventory.actual_cash).toLocaleString()}) + مصارف ({Number(inventory.bank_balance).toLocaleString()}) + نطلب ({Number(inventory.total_receivables).toLocaleString()})
+                                    </span>
+                                </div>
+                                <span className="font-mono text-sm font-bold text-blue-700 dark:text-blue-300" dir="ltr">
+                                    {Number(inventory.total_assets).toLocaleString()} د.ع
+                                </span>
+                            </div>
+
+                            {/* 2. مجموع الالتزامات */}
+                            <div className="p-3 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 flex justify-between items-center">
+                                <div>
+                                    <span className="font-bold text-amber-900 dark:text-amber-300 block">
+                                        2. مجموع الالتزامات:
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                        مطلوبين ({Number(inventory.total_payables).toLocaleString()}) + كمرك ({Number(inventory.total_customs).toLocaleString()})
+                                    </span>
+                                </div>
+                                <span className="font-mono text-sm font-bold text-amber-700 dark:text-amber-300" dir="ltr">
+                                    {Number(inventory.total_liabilities).toLocaleString()} د.ع
+                                </span>
+                            </div>
+
+                            {/* 3. الربح قبل خصم السابق */}
+                            <div className="p-3 rounded-lg bg-muted/40 border border-border/80 flex justify-between items-center">
+                                <div>
+                                    <span className="font-bold text-foreground block">
+                                        3. الربح الإجمالي الحالي:
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground">الرصيد المتوفر - الالتزامات</span>
+                                </div>
+                                <span className="font-mono text-sm font-bold text-foreground" dir="ltr">
+                                    {Number(inventory.net_worth).toLocaleString()} د.ع
+                                </span>
+                            </div>
+
+                            {/* 4. ربح الجرد الجديد */}
+                            <div className="p-3.5 rounded-xl bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-between">
+                                <div>
+                                    <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 block">
+                                        4. ربح الجرد الجديد (صافي الفترة):
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                        الربح الحالي ({Number(inventory.net_worth).toLocaleString()}) - ربح آخر جرد ({Number(inventory.previous_net_worth || 0).toLocaleString()})
+                                    </span>
+                                </div>
+                                <span
+                                    className={`font-mono text-lg font-black ${
+                                        Number(inventory.inventory_profit) >= 0
+                                            ? 'text-emerald-600 dark:text-emerald-400'
+                                            : 'text-rose-600 dark:text-rose-400'
+                                    }`}
+                                    dir="ltr"
+                                >
+                                    {Number(inventory.inventory_profit) >= 0 ? '+' : ''}
+                                    {Number(inventory.inventory_profit).toLocaleString()} د.ع
+                                </span>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
-            </AuthenticatedLayout>
+            </div>
+        </AuthenticatedLayout>
     );
 }

@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Bank;
-use App\Models\Fund;
-use App\Models\Investor;
 use App\Models\PeriodicInventory;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,7 +9,7 @@ use Inertia\Inertia;
 class PeriodicInventoryController extends Controller
 {
     /**
-     * Display a listing of periodic inventories.
+     * Display a listing of periodic inventories (الجرد).
      */
     public function index(Request $request)
     {
@@ -36,20 +33,35 @@ class PeriodicInventoryController extends Controller
 
         $inventories = $query->paginate(15)->withQueryString();
 
+        // Calculate statistics for the filtered period
+        $statsQuery = PeriodicInventory::query();
+        if ($request->filled('from_date')) {
+            $statsQuery->whereDate('inventory_date', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $statsQuery->whereDate('inventory_date', '<=', $request->to_date);
+        }
+
+        $totalCount = (clone $statsQuery)->count();
+        $periodProfitsSum = (float) (clone $statsQuery)->sum('inventory_profit');
+        $periodAssetsSum = (float) (clone $statsQuery)->sum('total_assets');
+
+        // Latest inventory profit overall (ربح آخر جرد مسجل)
         $latest = PeriodicInventory::latest('inventory_date')->first();
-        $totalCount = PeriodicInventory::count();
-        $latestNetWorth = $latest ? (float) $latest->net_worth : 0;
         $latestProfit = $latest ? (float) $latest->inventory_profit : 0;
-        $latestAssets = $latest ? (float) $latest->total_assets : 0;
 
         return Inertia::render('Inventories/Index', [
             'inventories' => $inventories,
-            'filters' => $request->only(['search', 'from_date', 'to_date']),
+            'filters' => [
+                'search' => $request->input('search', ''),
+                'from_date' => $request->input('from_date', ''),
+                'to_date' => $request->input('to_date', ''),
+            ],
             'stats' => [
                 'totalCount' => $totalCount,
-                'latestNetWorth' => $latestNetWorth,
+                'periodProfitsSum' => $periodProfitsSum,
+                'periodAssetsSum' => $periodAssetsSum,
                 'latestProfit' => $latestProfit,
-                'latestAssets' => $latestAssets,
             ],
         ]);
     }
@@ -59,41 +71,12 @@ class PeriodicInventoryController extends Controller
      */
     public function create()
     {
-        // 1. Live system funds and banks
-        $funds = Fund::where('status', 'active')->get();
-        $banks = Bank::where('status', 'active')->get();
-
-        // Calculate default cash from active IQD funds
-        $systemActualCash = (float) Fund::where('status', 'active')
-            ->where('currency', 'IQD')
-            ->sum('balance');
-
-        // Calculate default bank balances in IQD
-        $systemBankBalance = (float) Bank::where('status', 'active')
-            ->where('currency', 'IQD')
-            ->sum('balance');
-
-        // 2. Previous inventory net worth
-        $previousInventory = PeriodicInventory::latest('inventory_date')->first();
-        $previousNetWorth = $previousInventory ? (float) $previousInventory->net_worth : 0;
-
-        // 3. Mohammed Investor info & opening cash
-        $mohammed = Investor::where('code', 'INV-MOHAMMED')
-            ->orWhere('name', 'محمد')
-            ->first();
-
-        $mohammedOpeningCash = $previousInventory
-            ? (float) $previousInventory->mohammed_cash_present
-            : ($mohammed ? (float) $mohammed->capital_balance : 0);
+        // Get the latest inventory's profit to be used as previous profit
+        $latest = PeriodicInventory::latest('inventory_date')->first();
+        $previousProfit = $latest ? (float) $latest->inventory_profit : 0;
 
         return Inertia::render('Inventories/Create', [
-            'systemActualCash' => $systemActualCash,
-            'systemBankBalance' => $systemBankBalance,
-            'previousNetWorth' => $previousNetWorth,
-            'mohammedOpeningCash' => $mohammedOpeningCash,
-            'mohammedInvestor' => $mohammed,
-            'funds' => $funds,
-            'banks' => $banks,
+            'previousProfit' => $previousProfit,
         ]);
     }
 
@@ -107,17 +90,11 @@ class PeriodicInventoryController extends Controller
             'title' => 'nullable|string|max:255',
             'actual_cash' => 'nullable|numeric',
             'bank_balance' => 'nullable|numeric',
-            'previous_net_worth' => 'nullable|numeric',
+            'previous_profit' => 'nullable|numeric',
             'receivables' => 'nullable|array',
             'payables' => 'nullable|array',
             'customs' => 'nullable|array',
             'expenses' => 'nullable|array',
-            'mohammed_opening_cash' => 'nullable|numeric',
-            'mohammed_outflow' => 'nullable|numeric',
-            'mohammed_inflow' => 'nullable|numeric',
-            'mohammed_expenses' => 'nullable|numeric',
-            'mohammed_assets' => 'nullable|numeric',
-            'mohammed_cash_present' => 'nullable|numeric',
             'notes' => 'nullable|string',
         ]);
 
@@ -133,35 +110,23 @@ class PeriodicInventoryController extends Controller
 
         $actualCash = (float) ($validated['actual_cash'] ?? 0);
         $bankBalance = (float) ($validated['bank_balance'] ?? 0);
-        $previousNetWorth = (float) ($validated['previous_net_worth'] ?? 0);
+        $previousProfit = (float) ($validated['previous_profit'] ?? 0);
 
         // Core Accounting Equations
-        // 1. م/ الموجودات = كاش حقيقي + رصيد مصارف + نطلب
-        $totalAssets = $actualCash + $bankBalance + $totalReceivables;
+        // 1. الرصيد المتوفر = رصيد الصندوق (كاش) + رصيد المصارف + نطلب
+        $availableBalance = $actualCash + $bankBalance + $totalReceivables;
 
-        // 2. م/ مطلوبات = مطلوبين + كمرك
+        // 2. مجموع الالتزامات = مطلوبين + كمرك
         $totalLiabilities = $totalPayables + $totalCustoms;
 
-        // 3. الموجود الكلي = م/ الموجودات - م/ مطلوبات
-        $netWorth = $totalAssets - $totalLiabilities;
+        // 3. الربح الإجمالي الحالي = الرصيد المتوفر - (المطلوبين + الكمرك)
+        $currentProfit = $availableBalance - $totalLiabilities;
 
-        // 4. ربح آخر جرد = الموجود الكلي - موجود كلي سابق
-        $inventoryProfit = $netWorth - $previousNetWorth;
-
-        // Special Account: خاص محمد
-        $mohOpening = (float) ($validated['mohammed_opening_cash'] ?? 0);
-        $mohOutflow = (float) ($validated['mohammed_outflow'] ?? 0);
-        $mohInflow = (float) ($validated['mohammed_inflow'] ?? 0);
-        $mohExpenses = (float) ($validated['mohammed_expenses'] ?? 0);
-        $mohAssets = (float) ($validated['mohammed_assets'] ?? 0);
-        $mohCashPresent = (float) ($validated['mohammed_cash_present'] ?? 0);
-
-        // كاش محسوب = افتتاح + وارد - صادر - نثريات
-        $mohCalculatedCash = ($mohOpening + $mohInflow) - ($mohOutflow + $mohExpenses);
-        $mohDifference = $mohCashPresent - $mohCalculatedCash;
+        // 4. الربح الجديد = الربح الإجمالي الحالي - ربح آخر جرد
+        $newProfit = $currentProfit - $previousProfit;
 
         $inventory = PeriodicInventory::create([
-            'title' => $validated['title'] ?: 'جرد وميزانية بتاريخ ' . $validated['inventory_date'],
+            'title' => $validated['title'] ?: 'جرد بتاريخ ' . $validated['inventory_date'],
             'inventory_date' => $validated['inventory_date'],
             'receivables_items' => $receivables,
             'payables_items' => $payables,
@@ -173,27 +138,17 @@ class PeriodicInventoryController extends Controller
             'total_expenses' => $totalExpenses,
             'actual_cash' => $actualCash,
             'bank_balance' => $bankBalance,
-            'total_assets' => $totalAssets,
+            'total_assets' => $availableBalance,
             'total_liabilities' => $totalLiabilities,
-            'net_worth' => $netWorth,
-            'previous_net_worth' => $previousNetWorth,
-            'inventory_profit' => $inventoryProfit,
-            'mohammed_opening_cash' => $mohOpening,
-            'mohammed_outflow' => $mohOutflow,
-            'mohammed_inflow' => $mohInflow,
-            'mohammed_expenses' => $mohExpenses,
-            'mohammed_assets' => $mohAssets,
-            'mohammed_cash_present' => $mohCashPresent,
-            'mohammed_calculated_cash' => $mohCalculatedCash,
-            'mohammed_difference' => $mohDifference,
-            'mohammed_previous_net_worth' => $previousNetWorth,
-            'mohammed_current_net_worth' => $netWorth,
+            'net_worth' => $currentProfit,
+            'previous_net_worth' => $previousProfit,
+            'inventory_profit' => $newProfit,
             'notes' => $validated['notes'] ?? null,
             'created_by' => auth()->id(),
         ]);
 
         return redirect()->route('inventories.show', $inventory->id)
-            ->with('success', 'تم حفظ كشف الجرد والميزانية بنجاح.');
+            ->with('success', 'تم حفظ كشف الجرد بنجاح.');
     }
 
     /**
@@ -244,4 +199,3 @@ class PeriodicInventoryController extends Controller
         return $clean;
     }
 }
-
