@@ -277,20 +277,20 @@ export default function InventoryEdit({ inventory }: Props) {
                         description="الرصيد المتوفر - الالتزامات"
                     />
                     <StatCard
-                        title="الرصيد المتوفر سابقاً"
+                        title="الموجود الكلي السابق"
                         value={calculations.prevAvailableBalance}
                         currency="د.ع"
                         color="muted"
                         icon={History}
-                        description="الرصيد المتوفر المسجل بالجرد السابق"
+                        description="الرصيد المعتمد من الجرد السابق"
                     />
                     <StatCard
-                        title="ربح الجرد الجديد"
+                        title="الربح"
                         value={calculations.newProfit}
                         currency="د.ع"
                         color={calculations.newProfit >= 0 ? 'emerald' : 'muted'}
                         icon={TrendingUp}
-                        description="الموجود الكلي - الرصيد المتوفر السابق"
+                        description="الموجود الكلي - الموجود الكلي السابق"
                     />
                 </StatGrid>
 
@@ -594,10 +594,10 @@ export default function InventoryEdit({ inventory }: Props) {
                             <div className="space-y-1.5 pt-2 border-t border-border/60">
                                 <div className="flex justify-between items-center">
                                     <Label htmlFor="previous_available_balance" className="font-semibold text-muted-foreground">
-                                        الرصيد المتوفر السابق:
+                                        الموجود الكلي السابق:
                                     </Label>
                                     <Badge variant="outline" className="text-[10px] font-mono">
-                                        الرصيد المتوفر من الجرد السابق
+                                        الرصيد المعتمد من الجرد السابق
                                     </Badge>
                                 </div>
                                 <Input
@@ -611,19 +611,19 @@ export default function InventoryEdit({ inventory }: Props) {
                                 />
                                 <p className="text-[11px] text-muted-foreground flex items-center gap-1">
                                     <Info className="h-3 w-3 text-primary shrink-0" />
-                                    <span>يتم خصم الرصيد المتوفر السابق من الموجود الكلي لاستخراج ربح الجرد الجديد.</span>
+                                    <span>يتم خصم هذا المبلغ من الموجود الكلي لاستخراج الربح.</span>
                                 </p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Left Card: خلاصة معادلة الجرد واحتساب الربح */}
+                    {/* Left Card: تفصيل معادلة الجرد والأرباح */}
                     <Card className="shadow-xs border-border">
                         <CardHeader className="pb-3 pt-4 px-4 border-b border-border bg-muted/20">
                             <CardTitle className="text-sm font-bold flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <Calculator className="h-4 w-4 text-primary" />
-                                    <span>خلاصة احتساب أرباح الجرد</span>
+                                    <span>تفصيل معادلة الجرد والأرباح</span>
                                 </div>
                                 <Badge variant="outline" className="text-[10px] font-bold text-primary">
                                     معادلة الجرد
@@ -675,14 +675,27 @@ export default function InventoryEdit({ inventory }: Props) {
                                 </span>
                             </div>
 
-                            {/* الخطوة 4: الربح الجديد النهائي */}
+                            {/* الخطوة 4: الموجود الكلي السابق */}
+                            <div className="p-3 rounded-lg bg-muted/30 border border-border/70 flex justify-between items-center">
+                                <div>
+                                    <span className="font-bold text-foreground block">
+                                        4. الموجود الكلي السابق:
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground">الرصيد المعتمد من الجرد السابق</span>
+                                </div>
+                                <span className="font-mono text-sm font-semibold text-muted-foreground" dir="ltr">
+                                    {calculations.prevAvailableBalance.toLocaleString()} د.ع
+                                </span>
+                            </div>
+
+                            {/* الخطوة 5: الربح */}
                             <div className="p-3.5 rounded-xl bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-between">
                                 <div>
                                     <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 block">
-                                        4. ربح الجرد الجديد (صافي الفترة):
+                                        5. الربح:
                                     </span>
                                     <span className="text-[10px] text-muted-foreground">
-                                        الموجود الكلي ({calculations.currentProfit.toLocaleString()}) - الرصيد المتوفر السابق ({calculations.prevAvailableBalance.toLocaleString()})
+                                        الموجود الكلي ({calculations.currentProfit.toLocaleString()}) - الموجود الكلي السابق ({calculations.prevAvailableBalance.toLocaleString()})
                                     </span>
                                 </div>
                                 <div className="text-left font-mono">

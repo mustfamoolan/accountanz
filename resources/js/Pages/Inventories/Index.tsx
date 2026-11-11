@@ -155,7 +155,7 @@ export default function InventoriesIndex({ inventories, filters, stats }: Props)
             ),
         },
         {
-            header: 'الرصيد المتوفر السابق',
+            header: 'الموجود الكلي السابق',
             align: 'right',
             cell: (inv) => (
                 <span className="font-mono text-xs text-muted-foreground">
@@ -164,7 +164,7 @@ export default function InventoriesIndex({ inventories, filters, stats }: Props)
             ),
         },
         {
-            header: 'ربح الجرد الجديد',
+            header: 'الربح',
             align: 'right',
             cell: (inv) => (
                 <span
@@ -254,13 +254,13 @@ export default function InventoriesIndex({ inventories, filters, stats }: Props)
                     <MoneyDisplay amount={inv.total_liabilities} currency="د.ع" size="sm" variant="negative" />
                 </div>
                 <div>
-                    <span className="text-muted-foreground block text-[10px]">الرصيد المتوفر السابق:</span>
+                    <span className="text-muted-foreground block text-[10px]">الموجود الكلي السابق:</span>
                     <span className="font-mono font-semibold text-muted-foreground">
                         {Number(inv.previous_net_worth || 0).toLocaleString()} د.ع
                     </span>
                 </div>
                 <div>
-                    <span className="text-muted-foreground block text-[10px]">ربح الجرد الجديد:</span>
+                    <span className="text-muted-foreground block text-[10px]">الربح:</span>
                     <span
                         className={`font-mono font-bold ${
                             Number(inv.inventory_profit) >= 0 ? 'text-emerald-600' : 'text-rose-600'

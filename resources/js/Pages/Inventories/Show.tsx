@@ -148,20 +148,20 @@ export default function InventoryShow({ inventory }: Props) {
                         description="الرصيد المتوفر - الالتزامات"
                     />
                     <StatCard
-                        title="الرصيد المتوفر سابقاً"
+                        title="الموجود الكلي السابق"
                         value={inventory.previous_net_worth}
                         currency="د.ع"
                         color="muted"
                         icon={History}
-                        description="الرصيد المتوفر المسجل بالجرد السابق"
+                        description="الرصيد المعتمد من الجرد السابق"
                     />
                     <StatCard
-                        title="ربح الجرد الجديد"
+                        title="الربح"
                         value={inventory.inventory_profit}
                         currency="د.ع"
                         color={Number(inventory.inventory_profit) >= 0 ? 'emerald' : 'muted'}
                         icon={TrendingUp}
-                        description="الموجود الكلي - الرصيد المتوفر السابق"
+                        description="الموجود الكلي - الموجود الكلي السابق"
                     />
                 </StatGrid>
 
@@ -288,7 +288,7 @@ export default function InventoryShow({ inventory }: Props) {
                             </div>
 
                             <div className="flex justify-between items-center py-1 border-b border-border/60">
-                                <span className="text-muted-foreground font-semibold">الرصيد المتوفر السابق:</span>
+                                <span className="text-muted-foreground font-semibold">الموجود الكلي السابق:</span>
                                 <span className="font-mono font-semibold text-muted-foreground">
                                     {Number(inventory.previous_net_worth || 0).toLocaleString()} د.ع
                                 </span>
@@ -352,21 +352,34 @@ export default function InventoryShow({ inventory }: Props) {
                                     <span className="font-bold text-foreground block">
                                         3. الموجود الكلي:
                                     </span>
-                                    <span className="text-[10px] text-muted-foreground">الرصيد المتوفر - الالتزامات</span>
+                                    <span className="text-[10px] text-muted-foreground">الرصيد المتوفر - مجموع الالتزامات</span>
                                 </div>
                                 <span className="font-mono text-sm font-bold text-foreground" dir="ltr">
                                     {Number(inventory.net_worth).toLocaleString()} د.ع
                                 </span>
                             </div>
 
-                            {/* 4. ربح الجرد الجديد */}
+                            {/* 4. الموجود الكلي السابق */}
+                            <div className="p-3 rounded-lg bg-muted/30 border border-border/70 flex justify-between items-center">
+                                <div>
+                                    <span className="font-bold text-foreground block">
+                                        4. الموجود الكلي السابق:
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground">الرصيد المعتمد من الجرد السابق</span>
+                                </div>
+                                <span className="font-mono text-sm font-semibold text-muted-foreground" dir="ltr">
+                                    {Number(inventory.previous_net_worth || 0).toLocaleString()} د.ع
+                                </span>
+                            </div>
+
+                            {/* 5. الربح */}
                             <div className="p-3.5 rounded-xl bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-between">
                                 <div>
                                     <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 block">
-                                        4. ربح الجرد الجديد (صافي الفترة):
+                                        5. الربح:
                                     </span>
                                     <span className="text-[10px] text-muted-foreground">
-                                        الموجود الكلي ({Number(inventory.net_worth).toLocaleString()}) - الرصيد المتوفر السابق ({Number(inventory.previous_net_worth || 0).toLocaleString()})
+                                        الموجود الكلي ({Number(inventory.net_worth).toLocaleString()}) - الموجود الكلي السابق ({Number(inventory.previous_net_worth || 0).toLocaleString()})
                                     </span>
                                 </div>
                                 <span
