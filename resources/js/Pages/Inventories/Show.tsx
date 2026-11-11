@@ -16,6 +16,8 @@ import {
     CreditCard,
     Calculator,
     Info,
+    Pencil,
+    History,
 } from 'lucide-react';
 
 interface Item {
@@ -89,6 +91,12 @@ export default function InventoryShow({ inventory }: Props) {
                                     <span>العودة للقائمة</span>
                                 </Button>
                             </Link>
+                            <Link href={`/inventories/${inventory.id}/edit`}>
+                                <Button size="sm" className="gap-1.5 text-xs h-9 bg-primary hover:bg-primary/90 font-bold">
+                                    <Pencil className="h-3.5 w-3.5" />
+                                    <span>تعديل الكشف</span>
+                                </Button>
+                            </Link>
                             <Button
                                 type="button"
                                 variant="outline"
@@ -114,7 +122,7 @@ export default function InventoryShow({ inventory }: Props) {
                 />
 
                 {/* 2. Top Stats Grid */}
-                <StatGrid columns={4}>
+                <StatGrid columns={5}>
                     <StatCard
                         title="الرصيد المتوفر"
                         value={inventory.total_assets}
@@ -132,7 +140,7 @@ export default function InventoryShow({ inventory }: Props) {
                         description="مطلوبين + كمرك"
                     />
                     <StatCard
-                        title="الربح قبل خصم السابق"
+                        title="الموجود الكلي"
                         value={inventory.net_worth}
                         currency="د.ع"
                         color="primary"
@@ -140,12 +148,20 @@ export default function InventoryShow({ inventory }: Props) {
                         description="الرصيد المتوفر - الالتزامات"
                     />
                     <StatCard
+                        title="الرصيد المتوفر سابقاً"
+                        value={inventory.previous_net_worth}
+                        currency="د.ع"
+                        color="muted"
+                        icon={History}
+                        description="الرصيد المتوفر المسجل بالجرد السابق"
+                    />
+                    <StatCard
                         title="ربح الجرد الجديد"
                         value={inventory.inventory_profit}
                         currency="د.ع"
                         color={Number(inventory.inventory_profit) >= 0 ? 'emerald' : 'muted'}
                         icon={TrendingUp}
-                        description="الربح الحالي - ربح آخر جرد"
+                        description="الموجود الكلي - الرصيد المتوفر السابق"
                     />
                 </StatGrid>
 
@@ -272,7 +288,7 @@ export default function InventoryShow({ inventory }: Props) {
                             </div>
 
                             <div className="flex justify-between items-center py-1 border-b border-border/60">
-                                <span className="text-muted-foreground font-semibold">ربح آخر جرد سابق:</span>
+                                <span className="text-muted-foreground font-semibold">الرصيد المتوفر السابق:</span>
                                 <span className="font-mono font-semibold text-muted-foreground">
                                     {Number(inventory.previous_net_worth || 0).toLocaleString()} د.ع
                                 </span>
@@ -330,11 +346,11 @@ export default function InventoryShow({ inventory }: Props) {
                                 </span>
                             </div>
 
-                            {/* 3. الربح قبل خصم السابق */}
+                            {/* 3. الموجود الكلي */}
                             <div className="p-3 rounded-lg bg-muted/40 border border-border/80 flex justify-between items-center">
                                 <div>
                                     <span className="font-bold text-foreground block">
-                                        3. الربح الإجمالي الحالي:
+                                        3. الموجود الكلي:
                                     </span>
                                     <span className="text-[10px] text-muted-foreground">الرصيد المتوفر - الالتزامات</span>
                                 </div>
@@ -350,7 +366,7 @@ export default function InventoryShow({ inventory }: Props) {
                                         4. ربح الجرد الجديد (صافي الفترة):
                                     </span>
                                     <span className="text-[10px] text-muted-foreground">
-                                        الربح الحالي ({Number(inventory.net_worth).toLocaleString()}) - ربح آخر جرد ({Number(inventory.previous_net_worth || 0).toLocaleString()})
+                                        الموجود الكلي ({Number(inventory.net_worth).toLocaleString()}) - الرصيد المتوفر السابق ({Number(inventory.previous_net_worth || 0).toLocaleString()})
                                     </span>
                                 </div>
                                 <span

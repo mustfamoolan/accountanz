@@ -81,10 +81,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/investors/{investor}/distribute-profit', [InvestorController::class, 'distributeProfit'])->name('investors.distribute-profit');
     Route::post('/investors/{investor}/withdraw-profit', [InvestorController::class, 'withdrawProfit'])->name('investors.withdraw-profit');
 
-    // Periodic Inventories & Balance Sheet (الجرد والميزانية)
+    // Periodic Inventories & Balance Sheet (الجرد)
     Route::get('/inventories', [PeriodicInventoryController::class, 'index'])->name('inventories.index');
     Route::get('/inventories/create', [PeriodicInventoryController::class, 'create'])->name('inventories.create');
     Route::post('/inventories', [PeriodicInventoryController::class, 'store'])->name('inventories.store');
+    Route::post('/inventories/recalculate', [PeriodicInventoryController::class, 'recalculateAll'])->name('inventories.recalculate');
     Route::get('/inventories/{inventory}', [PeriodicInventoryController::class, 'show'])->name('inventories.show');
+    Route::get('/inventories/{inventory}/edit', [PeriodicInventoryController::class, 'edit'])->name('inventories.edit');
+    Route::put('/inventories/{inventory}', [PeriodicInventoryController::class, 'update'])->name('inventories.update');
     Route::delete('/inventories/{inventory}', [PeriodicInventoryController::class, 'destroy'])->name('inventories.destroy');
 });

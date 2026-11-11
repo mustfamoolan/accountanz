@@ -23,10 +23,12 @@ import {
     Layers,
     Coins,
     Info,
+    History,
 } from 'lucide-react';
 
 interface Props {
-    previousProfit: number;
+    previousAvailableBalance?: number;
+    previousProfit?: number;
 }
 
 interface DynamicRow {
@@ -40,7 +42,9 @@ interface DynamicRow {
     expense_details: string;
 }
 
-export default function InventoryCreate({ previousProfit }: Props) {
+export default function InventoryCreate({ previousAvailableBalance, previousProfit }: Props) {
+    const initialPrevBalance = previousAvailableBalance ?? previousProfit ?? 0;
+
     const createEmptyRow = (): DynamicRow => ({
         receivable_amount: '',
         receivable_details: '',
@@ -61,7 +65,7 @@ export default function InventoryCreate({ previousProfit }: Props) {
         inventory_date: new Date().toISOString().split('T')[0],
         actual_cash: '',
         bank_balance: '',
-        previous_profit: String(previousProfit || 0),
+        previous_available_balance: String(initialPrevBalance),
         notes: '',
     });
 
@@ -103,7 +107,7 @@ export default function InventoryCreate({ previousProfit }: Props) {
 
         const actualCash = parseFloat(formData.actual_cash) || 0;
         const bankBalance = parseFloat(formData.bank_balance) || 0;
-        const prevProfit = parseFloat(formData.previous_profit) || 0;
+        const prevAvailableBalance = parseFloat(formData.previous_available_balance) || 0;
 
         // 1. الرصيد المتوفر = رصيد الصندوق (كاش) + رصيد المصارف + مجموع نطلب
         const availableBalance = actualCash + bankBalance + totalReceivables;
@@ -111,11 +115,11 @@ export default function InventoryCreate({ previousProfit }: Props) {
         // 2. مجموع الالتزامات = مطلوبين + كمرك
         const totalLiabilities = totalPayables + totalCustoms;
 
-        // 3. الربح الإجمالي الحالي = الرصيد المتوفر - (مطلوبين + كمرك)
+        // 3. الموجود الكلي = الرصيد المتوفر - مجموع الالتزامات
         const currentProfit = availableBalance - totalLiabilities;
 
-        // 4. الربح الجديد = الربح الإجمالي الحالي - ربح آخر جرد
-        const newProfit = currentProfit - prevProfit;
+        // 4. ربح الجرد الجديد = الموجود الكلي - الرصيد المتوفر السابق
+        const newProfit = currentProfit - prevAvailableBalance;
 
         return {
             totalReceivables,
@@ -124,7 +128,7 @@ export default function InventoryCreate({ previousProfit }: Props) {
             totalExpenses,
             actualCash,
             bankBalance,
-            prevProfit,
+            prevAvailableBalance,
             availableBalance,
             totalLiabilities,
             currentProfit,
@@ -196,7 +200,7 @@ export default function InventoryCreate({ previousProfit }: Props) {
                 />
 
                 {/* 2. Top Summary KPI Cards */}
-                <StatGrid columns={4}>
+                <StatGrid columns={5}>
                     <StatCard
                         title="الرصيد المتوفر"
                         value={calculations.availableBalance}
@@ -214,7 +218,7 @@ export default function InventoryCreate({ previousProfit }: Props) {
                         description="مطلوبين + كمرك"
                     />
                     <StatCard
-                        title="الربح قبل خصم السابق"
+                        title="الموجود الكلي"
                         value={calculations.currentProfit}
                         currency="د.ع"
                         color="primary"
@@ -222,12 +226,20 @@ export default function InventoryCreate({ previousProfit }: Props) {
                         description="الرصيد المتوفر - الالتزامات"
                     />
                     <StatCard
+                        title="الرصيد المتوفر سابقاً"
+                        value={calculations.prevAvailableBalance}
+                        currency="د.ع"
+                        color="muted"
+                        icon={History}
+                        description="الرصيد المتوفر المسجل بالجرد السابق"
+                    />
+                    <StatCard
                         title="ربح الجرد الجديد"
                         value={calculations.newProfit}
                         currency="د.ع"
                         color={calculations.newProfit >= 0 ? 'emerald' : 'muted'}
                         icon={TrendingUp}
-                        description="الربح الحالي - ربح آخر جرد"
+                        description="الموجود الكلي - الرصيد المتوفر السابق"
                     />
                 </StatGrid>
 
@@ -530,25 +542,25 @@ export default function InventoryCreate({ previousProfit }: Props) {
 
                             <div className="space-y-1.5 pt-2 border-t border-border/60">
                                 <div className="flex justify-between items-center">
-                                    <Label htmlFor="previous_profit" className="font-semibold text-muted-foreground">
-                                        ربح آخر جرد (السابق):
+                                    <Label htmlFor="previous_available_balance" className="font-semibold text-muted-foreground">
+                                        الرصيد المتوفر السابق:
                                     </Label>
                                     <Badge variant="outline" className="text-[10px] font-mono">
-                                        مسجل من الجرد السابق
+                                        الرصيد المتوفر من آخر جرد
                                     </Badge>
                                 </div>
                                 <Input
-                                    id="previous_profit"
+                                    id="previous_available_balance"
                                     type="number"
                                     step="any"
-                                    value={formData.previous_profit}
-                                    onChange={(e) => setData('previous_profit', e.target.value)}
+                                    value={formData.previous_available_balance}
+                                    onChange={(e) => setData('previous_available_balance', e.target.value)}
                                     className="h-9 font-mono text-xs bg-muted/30"
                                     dir="ltr"
                                 />
                                 <p className="text-[11px] text-muted-foreground flex items-center gap-1">
                                     <Info className="h-3 w-3 text-primary shrink-0" />
-                                    <span>يتم خصم هذا المبلغ من الربح الإجمالي الحالي لاستخراج الربح الجديد.</span>
+                                    <span>يتم خصم الرصيد المتوفر السابق من الموجود الكلي لاستخراج ربح الجرد الجديد.</span>
                                 </p>
                             </div>
                         </CardContent>
@@ -599,11 +611,11 @@ export default function InventoryCreate({ previousProfit }: Props) {
                                 </span>
                             </div>
 
-                            {/* الخطوة 3: الربح قبل خصم السابق */}
+                            {/* الخطوة 3: الموجود الكلي */}
                             <div className="p-3 rounded-lg bg-muted/40 border border-border/80 flex justify-between items-center">
                                 <div>
                                     <span className="font-bold text-foreground block">
-                                        3. الربح الإجمالي الحالي:
+                                        3. الموجود الكلي:
                                     </span>
                                     <span className="text-[10px] text-muted-foreground">الرصيد المتوفر - مجموع الالتزامات</span>
                                 </div>
@@ -619,7 +631,7 @@ export default function InventoryCreate({ previousProfit }: Props) {
                                         4. ربح الجرد الجديد (صافي الفترة):
                                     </span>
                                     <span className="text-[10px] text-muted-foreground">
-                                        الربح الحالي ({calculations.currentProfit.toLocaleString()}) - ربح آخر جرد ({calculations.prevProfit.toLocaleString()})
+                                        الموجود الكلي ({calculations.currentProfit.toLocaleString()}) - الرصيد المتوفر السابق ({calculations.prevAvailableBalance.toLocaleString()})
                                     </span>
                                 </div>
                                 <div className="text-left font-mono">
@@ -635,7 +647,7 @@ export default function InventoryCreate({ previousProfit }: Props) {
                                         {calculations.newProfit.toLocaleString()} د.ع
                                     </span>
                                     <span className="text-[9px] text-muted-foreground">
-                                        سيتم تخزينه كـ «ربح سابق» للجرد القادم
+                                        سيتم اعتماد الرصيد المتوفر لهذا الجرد كـ «رصيد متوفر سابق» للجرد القادم
                                     </span>
                                 </div>
                             </div>

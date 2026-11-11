@@ -26,6 +26,7 @@ import {
     CreditCard,
     Search,
     Trash2,
+    Pencil,
 } from 'lucide-react';
 
 interface PeriodicInventoryItem {
@@ -100,6 +101,12 @@ export default function InventoriesIndex({ inventories, filters, stats }: Props)
         }
     };
 
+    const handleRecalculate = () => {
+        if (confirm('هل تريد إعادة احتساب وتحديث جميع سجلات الجرد السابقة بناءً على (الرصيد المتوفر السابق) لكل جرد؟')) {
+            router.post('/inventories/recalculate');
+        }
+    };
+
     const columns: Column<PeriodicInventoryItem>[] = [
         {
             header: 'عنوان الكشف',
@@ -148,7 +155,7 @@ export default function InventoriesIndex({ inventories, filters, stats }: Props)
             ),
         },
         {
-            header: 'الربح السابق',
+            header: 'الرصيد المتوفر السابق',
             align: 'right',
             cell: (inv) => (
                 <span className="font-mono text-xs text-muted-foreground">
@@ -196,10 +203,16 @@ export default function InventoriesIndex({ inventories, filters, stats }: Props)
             align: 'center',
             cell: (inv) => (
                 <div className="flex items-center justify-center gap-1">
-                    <Button asChild size="sm" variant="ghost" className="h-7 text-xs px-2 gap-1">
+                    <Button asChild size="sm" variant="ghost" className="h-7 text-xs px-2 gap-1" title="عرض الكشف">
                         <Link href={`/inventories/${inv.id}`}>
                             <span>عرض</span>
                             <ArrowLeft className="h-3 w-3" />
+                        </Link>
+                    </Button>
+                    <Button asChild size="sm" variant="ghost" className="h-7 text-xs px-2 gap-1 text-primary hover:text-primary" title="تعديل الكشف">
+                        <Link href={`/inventories/${inv.id}/edit`}>
+                            <Pencil className="h-3 w-3" />
+                            <span>تعديل</span>
                         </Link>
                     </Button>
                     <Button
@@ -241,7 +254,7 @@ export default function InventoriesIndex({ inventories, filters, stats }: Props)
                     <MoneyDisplay amount={inv.total_liabilities} currency="د.ع" size="sm" variant="negative" />
                 </div>
                 <div>
-                    <span className="text-muted-foreground block text-[10px]">ربح آخر جرد سابق:</span>
+                    <span className="text-muted-foreground block text-[10px]">الرصيد المتوفر السابق:</span>
                     <span className="font-mono font-semibold text-muted-foreground">
                         {Number(inv.previous_net_worth || 0).toLocaleString()} د.ع
                     </span>
@@ -262,12 +275,20 @@ export default function InventoriesIndex({ inventories, filters, stats }: Props)
 
             <div className="flex justify-between items-center text-[10px] text-muted-foreground pt-1 border-t border-border/50">
                 <span>المسؤول: {inv.creator?.name || 'النظام'}</span>
-                <Button asChild size="sm" variant="outline" className="h-6 text-[10px] px-2 gap-1">
-                    <Link href={`/inventories/${inv.id}`}>
-                        <span>فتح الكشف</span>
-                        <ArrowLeft className="h-3 w-3" />
-                    </Link>
-                </Button>
+                <div className="flex items-center gap-1.5">
+                    <Button asChild size="sm" variant="ghost" className="h-6 text-[10px] px-2 gap-1 text-primary">
+                        <Link href={`/inventories/${inv.id}/edit`}>
+                            <Pencil className="h-3 w-3" />
+                            <span>تعديل</span>
+                        </Link>
+                    </Button>
+                    <Button asChild size="sm" variant="outline" className="h-6 text-[10px] px-2 gap-1">
+                        <Link href={`/inventories/${inv.id}`}>
+                            <span>فتح الكشف</span>
+                            <ArrowLeft className="h-3 w-3" />
+                        </Link>
+                    </Button>
+                </div>
             </div>
         </div>
     );
@@ -283,12 +304,25 @@ export default function InventoriesIndex({ inventories, filters, stats }: Props)
                     description="سجل عمليات الجرد الدورية واحتساب الأرباح التراكمية ومطابقة الأرصدة عبر الفترات."
                     icon={FileSpreadsheet}
                     actions={
-                        <Link href="/inventories/create">
-                            <Button size="sm" className="gap-1.5 text-xs h-9 bg-primary hover:bg-primary/90 font-bold">
-                                <PlusCircle className="h-4 w-4" />
-                                <span>إجراء جرد جديد</span>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleRecalculate}
+                                className="gap-1.5 text-xs h-9"
+                                title="إعادة احتساب كافة كشوفات الجرد السابقة بناءً على الرصيد المتوفر السابق"
+                            >
+                                <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span>إعادة احتساب السجلات القديمة</span>
                             </Button>
-                        </Link>
+                            <Link href="/inventories/create">
+                                <Button size="sm" className="gap-1.5 text-xs h-9 bg-primary hover:bg-primary/90 font-bold">
+                                    <PlusCircle className="h-4 w-4" />
+                                    <span>إجراء جرد جديد</span>
+                                </Button>
+                            </Link>
+                        </div>
                     }
                 />
 
