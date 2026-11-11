@@ -65,3 +65,4 @@ class RecalculateInventories extends Command
         return Command::SUCCESS;
     }
 }
+
