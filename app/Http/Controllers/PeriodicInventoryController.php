@@ -33,6 +33,9 @@ class PeriodicInventoryController extends Controller
 
         $inventories = $query->paginate(15)->withQueryString();
 
+        // Fetch all matching records (without pagination limit) for comprehensive Excel-like printing
+        $allInventories = (clone $query)->orderBy('inventory_date', 'asc')->get();
+
         // Calculate statistics for the filtered period
         $statsQuery = PeriodicInventory::query();
         if ($request->filled('from_date')) {
@@ -52,6 +55,7 @@ class PeriodicInventoryController extends Controller
 
         return Inertia::render('Inventories/Index', [
             'inventories' => $inventories,
+            'allInventories' => $allInventories,
             'filters' => [
                 'search' => $request->input('search', ''),
                 'from_date' => $request->input('from_date', ''),

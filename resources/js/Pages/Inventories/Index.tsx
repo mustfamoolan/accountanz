@@ -27,6 +27,7 @@ import {
     Search,
     Trash2,
     Pencil,
+    Printer,
 } from 'lucide-react';
 
 interface PeriodicInventoryItem {
@@ -55,6 +56,7 @@ interface Props {
         links: any[];
         total: number;
     };
+    allInventories?: PeriodicInventoryItem[];
     filters: {
         search?: string;
         from_date?: string;
@@ -68,7 +70,8 @@ interface Props {
     };
 }
 
-export default function InventoriesIndex({ inventories, filters, stats }: Props) {
+export default function InventoriesIndex({ inventories, allInventories, filters, stats }: Props) {
+    const printItems = allInventories && allInventories.length > 0 ? allInventories : inventories.data;
     const [search, setSearch] = useState(filters.search || '');
     const [fromDate, setFromDate] = useState(filters.from_date || '');
     const [toDate, setToDate] = useState(filters.to_date || '');
@@ -297,7 +300,7 @@ export default function InventoriesIndex({ inventories, filters, stats }: Props)
         <AuthenticatedLayout header="الجرد" activeNav="inventories">
             <Head title="الجرد الدوري" />
 
-            <div className="space-y-6" dir="rtl">
+            <div className="space-y-6 print:hidden" dir="rtl">
                 {/* 1. Page Header */}
                 <PageHeader
                     title="الجرد"
@@ -305,6 +308,17 @@ export default function InventoriesIndex({ inventories, filters, stats }: Props)
                     icon={FileSpreadsheet}
                     actions={
                         <div className="flex items-center gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.print()}
+                                className="gap-1.5 text-xs h-9 font-bold bg-muted/40 hover:bg-muted"
+                                title="طباعة سجل الجرد العام شاملاً كافة الكشوفات بنمط إكسل"
+                            >
+                                <Printer className="h-3.5 w-3.5" />
+                                <span>طباعة سجل الجرد العام</span>
+                            </Button>
                             <Button
                                 type="button"
                                 variant="outline"
@@ -451,6 +465,183 @@ export default function InventoriesIndex({ inventories, filters, stats }: Props)
                     renderMobileCard={renderMobileCard}
                     emptyMessage="لا توجد كشوفات جرد مسجلة في هذه الفترة."
                 />
+            </div>
+
+            {/* ========================================================================= */}
+            {/* Dedicated Excel-Style Official Print Document for General Inventories Log */}
+            {/* ========================================================================= */}
+            <div className="hidden print:block text-black bg-white w-full text-xs" dir="rtl">
+                {/* 1. Official Header */}
+                <div className="border-b-2 border-slate-900 pb-3 mb-4">
+                    <div className="flex justify-between items-start">
+                        <div className="text-right">
+                            <h1 className="text-xl font-black text-slate-900 tracking-tight">
+                                نظام إدارة الحسابات المالية والجرد
+                            </h1>
+                            <p className="text-xs text-slate-600 font-semibold mt-0.5">
+                                سجل الجرد العام الشامل ومطابقة الأرباح والموجودات
+                            </p>
+                        </div>
+                        <div className="text-center bg-slate-100 border border-slate-700 px-5 py-2 rounded">
+                            <h2 className="text-base font-black text-slate-900">
+                                سجل كشوفات الجرد العام الشامل
+                            </h2>
+                            <span className="font-mono text-xs font-bold text-slate-700 block mt-0.5">
+                                {filters.from_date || filters.to_date
+                                    ? `الفترة: ${filters.from_date || 'البداية'} إلى ${filters.to_date || 'الآن'}`
+                                    : 'كافة الفترات والعمليات المسجلة'}
+                            </span>
+                        </div>
+                        <div className="text-left font-mono text-[11px] text-slate-600">
+                            <div>تاريخ الطباعة: {new Date().toLocaleDateString('ar-IQ')}</div>
+                            <div>الوقت: {new Date().toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' })}</div>
+                        </div>
+                    </div>
+
+                    {/* Metadata Summary Box */}
+                    <table className="w-full mt-3 border-collapse border border-slate-700 text-xs">
+                        <tbody>
+                            <tr>
+                                <td className="border border-slate-700 p-1.5 font-bold bg-slate-100 w-1/6">إجمالي عدد الكشوفات:</td>
+                                <td className="border border-slate-700 p-1.5 font-mono font-bold w-2/6">{printItems.length} كشف جرد</td>
+                                <td className="border border-slate-700 p-1.5 font-bold bg-emerald-100 w-1/6 text-emerald-950">إجمالي أرباح الفترة المحددة:</td>
+                                <td className="border border-slate-700 p-1.5 font-mono font-black text-emerald-900 w-2/6 text-left" dir="ltr">
+                                    {stats.periodProfitsSum >= 0 ? '+' : ''}{stats.periodProfitsSum.toLocaleString()} د.ع
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="border border-slate-700 p-1.5 font-bold bg-slate-100">فترة التقرير:</td>
+                                <td className="border border-slate-700 p-1.5 font-semibold">
+                                    {filters.from_date || filters.to_date
+                                        ? `من ${filters.from_date || 'البداية'} إلى ${filters.to_date || 'تاريخ اليوم'}`
+                                        : 'كافة السجلات المسجلة'}
+                                </td>
+                                <td className="border border-slate-700 p-1.5 font-bold bg-blue-100 w-1/6 text-blue-950">إجمالي الأرصدة المتوفرة:</td>
+                                <td className="border border-slate-700 p-1.5 font-mono font-black text-blue-900 w-2/6 text-left" dir="ltr">
+                                    {stats.periodAssetsSum.toLocaleString()} د.ع
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* 2. Main Master Excel Grid Table */}
+                <div className="mb-4">
+                    <table className="w-full border-collapse border border-slate-700 text-[10px] text-right">
+                        <thead>
+                            <tr className="bg-slate-200 border border-slate-700 font-bold text-slate-900 text-center">
+                                <th className="border border-slate-700 p-1.5 w-7">#</th>
+                                <th className="border border-slate-700 p-1.5 w-20">تاريخ الجرد</th>
+                                <th className="border border-slate-700 p-1.5 text-right">عنوان الكشف</th>
+                                <th className="border border-slate-700 p-1.5 w-20">كاش الصندوق</th>
+                                <th className="border border-slate-700 p-1.5 w-20">المصارف</th>
+                                <th className="border border-slate-700 p-1.5 w-20">نطلب</th>
+                                <th className="border border-slate-700 p-1.5 w-24 bg-blue-100 text-blue-950 font-black">الرصيد المتوفر</th>
+                                <th className="border border-slate-700 p-1.5 w-24 bg-amber-100 text-amber-950 font-black">الالتزامات</th>
+                                <th className="border border-slate-700 p-1.5 w-24 bg-slate-300 font-black">الموجود الكلي</th>
+                                <th className="border border-slate-700 p-1.5 w-24">الموجود السابق</th>
+                                <th className="border border-slate-700 p-1.5 w-24 bg-emerald-100 text-emerald-950 font-black">الربح</th>
+                                <th className="border border-slate-700 p-1.5 w-16">نثريات</th>
+                                <th className="border border-slate-700 p-1.5 w-20">المسؤول</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {printItems.map((inv, idx) => (
+                                <tr key={inv.id} className={idx % 2 === 1 ? 'bg-slate-50/70' : 'bg-white'}>
+                                    <td className="border border-slate-700 p-1 text-center font-mono text-[9px] text-slate-600">{idx + 1}</td>
+                                    <td className="border border-slate-700 p-1 text-center font-mono whitespace-nowrap" dir="ltr">
+                                        {new Date(inv.inventory_date).toLocaleDateString('ar-IQ')}
+                                    </td>
+                                    <td className="border border-slate-700 p-1 font-semibold truncate max-w-[150px]">
+                                        {inv.title || `جرد #${inv.id}`}
+                                    </td>
+                                    <td className="border border-slate-700 p-1 font-mono text-left" dir="ltr">
+                                        {Number(inv.actual_cash || 0).toLocaleString()}
+                                    </td>
+                                    <td className="border border-slate-700 p-1 font-mono text-left" dir="ltr">
+                                        {Number(inv.bank_balance || 0).toLocaleString()}
+                                    </td>
+                                    <td className="border border-slate-700 p-1 font-mono text-left" dir="ltr">
+                                        {Number(inv.total_receivables || 0).toLocaleString()}
+                                    </td>
+                                    <td className="border border-slate-700 p-1 font-mono text-left font-bold bg-blue-50/40 text-blue-900" dir="ltr">
+                                        {Number(inv.total_assets || 0).toLocaleString()}
+                                    </td>
+                                    <td className="border border-slate-700 p-1 font-mono text-left font-bold bg-amber-50/40 text-amber-900" dir="ltr">
+                                        {Number(inv.total_liabilities || 0).toLocaleString()}
+                                    </td>
+                                    <td className="border border-slate-700 p-1 font-mono text-left font-bold bg-slate-100" dir="ltr">
+                                        {Number(inv.net_worth || 0).toLocaleString()}
+                                    </td>
+                                    <td className="border border-slate-700 p-1 font-mono text-left text-slate-600" dir="ltr">
+                                        {Number(inv.previous_net_worth || 0).toLocaleString()}
+                                    </td>
+                                    <td className="border border-slate-700 p-1 font-mono text-left font-black bg-emerald-50 text-emerald-900" dir="ltr">
+                                        {Number(inv.inventory_profit) >= 0 ? '+' : ''}{Number(inv.inventory_profit || 0).toLocaleString()}
+                                    </td>
+                                    <td className="border border-slate-700 p-1 font-mono text-left text-slate-500" dir="ltr">
+                                        {Number(inv.total_expenses || 0).toLocaleString()}
+                                    </td>
+                                    <td className="border border-slate-700 p-1 text-center whitespace-nowrap">{inv.creator?.name || 'النظام'}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                        <tfoot>
+                            <tr className="bg-slate-200 border-2 border-slate-900 font-bold text-slate-900 text-[10px]">
+                                <td colSpan={3} className="border border-slate-700 p-1.5 text-center font-black">
+                                    الإجمالي العام ({printItems.length} كشف):
+                                </td>
+                                <td className="border border-slate-700 p-1.5 font-mono text-left" dir="ltr">
+                                    {printItems.reduce((acc, i) => acc + Number(i.actual_cash || 0), 0).toLocaleString()}
+                                </td>
+                                <td className="border border-slate-700 p-1.5 font-mono text-left" dir="ltr">
+                                    {printItems.reduce((acc, i) => acc + Number(i.bank_balance || 0), 0).toLocaleString()}
+                                </td>
+                                <td className="border border-slate-700 p-1.5 font-mono text-left" dir="ltr">
+                                    {printItems.reduce((acc, i) => acc + Number(i.total_receivables || 0), 0).toLocaleString()}
+                                </td>
+                                <td className="border border-slate-700 p-1.5 font-mono font-black text-left bg-blue-100 text-blue-950" dir="ltr">
+                                    {printItems.reduce((acc, i) => acc + Number(i.total_assets || 0), 0).toLocaleString()}
+                                </td>
+                                <td className="border border-slate-700 p-1.5 font-mono font-black text-left bg-amber-100 text-amber-950" dir="ltr">
+                                    {printItems.reduce((acc, i) => acc + Number(i.total_liabilities || 0), 0).toLocaleString()}
+                                </td>
+                                <td className="border border-slate-700 p-1.5 font-mono text-left bg-slate-300">
+                                    —
+                                </td>
+                                <td className="border border-slate-700 p-1.5 font-mono text-left">
+                                    —
+                                </td>
+                                <td className="border border-slate-700 p-1.5 font-mono font-black text-left bg-emerald-100 text-emerald-950 text-[11px]" dir="ltr">
+                                    {stats.periodProfitsSum >= 0 ? '+' : ''}{stats.periodProfitsSum.toLocaleString()} د.ع
+                                </td>
+                                <td className="border border-slate-700 p-1.5 font-mono text-left" dir="ltr">
+                                    {printItems.reduce((acc, i) => acc + Number(i.total_expenses || 0), 0).toLocaleString()}
+                                </td>
+                                <td className="border border-slate-700 p-1.5"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                {/* 3. Official Signatures (Excel/Document Footer) */}
+                <div className="mt-8 pt-4 border-t-2 border-slate-800 grid grid-cols-3 gap-8 text-center break-inside-avoid">
+                    <div className="border border-slate-400 p-3 rounded">
+                        <p className="font-black text-slate-800 text-xs">منظم السجل (المحاسب المالي)</p>
+                        <p className="mt-7 text-slate-400 font-mono text-[10px]">................................................</p>
+                        <p className="text-[11px] font-semibold text-slate-700 mt-1">التوقيع والتاريخ</p>
+                    </div>
+                    <div className="border border-slate-400 p-3 rounded">
+                        <p className="font-black text-slate-800 text-xs">التدقيق المالي والرقابة</p>
+                        <p className="mt-7 text-slate-400 font-mono text-[10px]">................................................</p>
+                        <p className="text-[11px] text-slate-600 mt-1">التوقيع والختم المعتمد</p>
+                    </div>
+                    <div className="border border-slate-400 p-3 rounded">
+                        <p className="font-black text-slate-800 text-xs">الإدارة العامة والمصادقة</p>
+                        <p className="mt-7 text-slate-400 font-mono text-[10px]">................................................</p>
+                        <p className="text-[11px] text-slate-600 mt-1">المصادقة والتاريخ</p>
+                    </div>
+                </div>
             </div>
         </AuthenticatedLayout>
     );

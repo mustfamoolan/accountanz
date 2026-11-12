@@ -77,7 +77,7 @@ export default function InventoryShow({ inventory }: Props) {
         <AuthenticatedLayout header={`كشف: ${inventory.title}`} activeNav="inventories">
             <Head title={inventory.title || `جرد #${inventory.id}`} />
 
-            <div className="space-y-6" dir="rtl">
+            <div className="space-y-6 print:hidden" dir="rtl">
                 {/* 1. Page Header */}
                 <PageHeader
                     title={inventory.title || `كشف جرد #${inventory.id}`}
@@ -102,7 +102,7 @@ export default function InventoryShow({ inventory }: Props) {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => window.print()}
-                                className="gap-1.5 text-xs h-9"
+                                className="gap-1.5 text-xs h-9 font-bold bg-muted/40 hover:bg-muted"
                             >
                                 <Printer className="h-3.5 w-3.5" />
                                 <span>طباعة الكشف</span>
@@ -396,6 +396,299 @@ export default function InventoryShow({ inventory }: Props) {
                             </div>
                         </CardContent>
                     </Card>
+                </div>
+            </div>
+
+            {/* ========================================================================= */}
+            {/* Dedicated Excel-Style Official Print Document for Single Inventory Sheet */}
+            {/* ========================================================================= */}
+            <div className="hidden print:block text-black bg-white w-full text-xs" dir="rtl">
+                {/* 1. Official Header */}
+                <div className="border-b-2 border-slate-900 pb-3 mb-4">
+                    <div className="flex justify-between items-start">
+                        <div className="text-right">
+                            <h1 className="text-xl font-black text-slate-900 tracking-tight">
+                                نظام إدارة الحسابات المالية والجرد
+                            </h1>
+                            <p className="text-xs text-slate-600 font-semibold mt-0.5">
+                                سجل وتقارير الجرد المالي الدوري العام
+                            </p>
+                        </div>
+                        <div className="text-center bg-slate-100 border border-slate-700 px-5 py-2 rounded">
+                            <h2 className="text-base font-black text-slate-900">
+                                كشف جرد مالي دوري
+                            </h2>
+                            <span className="font-mono text-xs font-bold text-slate-700 block" dir="ltr">
+                                #{inventory.id}
+                            </span>
+                        </div>
+                        <div className="text-left font-mono text-[11px] text-slate-600">
+                            <div>تاريخ الطباعة: {new Date().toLocaleDateString('ar-IQ')}</div>
+                            <div>الوقت: {new Date().toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' })}</div>
+                        </div>
+                    </div>
+
+                    {/* Metadata Table (Excel style) */}
+                    <table className="w-full mt-3 border-collapse border border-slate-700 text-xs">
+                        <tbody>
+                            <tr>
+                                <td className="border border-slate-700 p-1.5 font-bold bg-slate-100 w-1/6">عنوان الكشف:</td>
+                                <td className="border border-slate-700 p-1.5 font-semibold w-2/6">{inventory.title || `كشف جرد #${inventory.id}`}</td>
+                                <td className="border border-slate-700 p-1.5 font-bold bg-slate-100 w-1/6">تاريخ الجرد:</td>
+                                <td className="border border-slate-700 p-1.5 font-mono w-2/6" dir="ltr">
+                                    {new Date(inventory.inventory_date).toLocaleDateString('ar-IQ', {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                    })}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="border border-slate-700 p-1.5 font-bold bg-slate-100">المسؤول / المحاسب:</td>
+                                <td className="border border-slate-700 p-1.5 font-semibold">{inventory.creator?.name || 'النظام'}</td>
+                                <td className="border border-slate-700 p-1.5 font-bold bg-slate-100">حالة الكشف:</td>
+                                <td className="border border-slate-700 p-1.5 font-semibold text-emerald-800">معتمد وموثق في السجلات</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* 2. Detailed Items Matrix (Excel Grid) */}
+                <div className="mb-4">
+                    <h3 className="font-bold text-xs mb-1.5 text-slate-800 flex items-center justify-between">
+                        <span>أولاً: جدول بنود ومفردات الجرد التفصيلي</span>
+                        <span className="text-[10px] text-slate-500 font-normal">المبالغ بالدينار العراقي (د.ع)</span>
+                    </h3>
+
+                    <table className="w-full border-collapse border border-slate-700 text-[11px]">
+                        <thead>
+                            {/* Super Category Headers */}
+                            <tr className="border border-slate-700 font-bold text-center">
+                                <th className="border border-slate-700 p-1.5 w-7 bg-slate-200">#</th>
+                                <th colSpan={2} className="border border-slate-700 p-1.5 bg-blue-100 text-blue-950 font-black">
+                                    1. نطلب (المدينون)
+                                </th>
+                                <th colSpan={2} className="border border-slate-700 p-1.5 bg-amber-100 text-amber-950 font-black">
+                                    2. مطلوبين (الدائنون)
+                                </th>
+                                <th colSpan={2} className="border border-slate-700 p-1.5 bg-orange-100 text-orange-950 font-black">
+                                    3. كمرك (تخليص جمركي)
+                                </th>
+                                <th colSpan={2} className="border border-slate-700 p-1.5 bg-slate-200 text-slate-900 font-black">
+                                    4. نثريات (تشغيلية - توثيق)
+                                </th>
+                            </tr>
+                            {/* Sub Headers */}
+                            <tr className="bg-slate-50 border border-slate-700 text-[10px] font-bold text-slate-800">
+                                <th className="border border-slate-700 p-1 text-center">ت</th>
+                                <th className="border border-slate-700 p-1 text-right w-[15%]">البيان / الاسم</th>
+                                <th className="border border-slate-700 p-1 text-left w-[10%]">المبلغ</th>
+                                <th className="border border-slate-700 p-1 text-right w-[15%]">البيان / الاسم</th>
+                                <th className="border border-slate-700 p-1 text-left w-[10%]">المبلغ</th>
+                                <th className="border border-slate-700 p-1 text-right w-[15%]">البيان / الاسم</th>
+                                <th className="border border-slate-700 p-1 text-left w-[10%]">المبلغ</th>
+                                <th className="border border-slate-700 p-1 text-right w-[15%]">البيان / الاسم</th>
+                                <th className="border border-slate-700 p-1 text-left w-[10%]">المبلغ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {Array.from({ length: Math.max(maxRows, 5) }).map((_, idx) => {
+                                const rec = receivables[idx];
+                                const pay = payables[idx];
+                                const cus = customs[idx];
+                                const exp = expenses[idx];
+
+                                return (
+                                    <tr key={idx} className={idx % 2 === 1 ? 'bg-slate-50/70' : 'bg-white'}>
+                                        <td className="border border-slate-700 p-1 text-center font-mono text-[10px] text-slate-600">
+                                            {idx + 1}
+                                        </td>
+
+                                        {/* نطلب */}
+                                        <td className="border border-slate-700 p-1 text-right truncate max-w-[120px]">
+                                            {rec?.details || (rec?.amount ? '—' : '')}
+                                        </td>
+                                        <td className="border border-slate-700 p-1 text-left font-mono" dir="ltr">
+                                            {rec && Number(rec.amount) > 0 ? Number(rec.amount).toLocaleString() : ''}
+                                        </td>
+
+                                        {/* مطلوبين */}
+                                        <td className="border border-slate-700 p-1 text-right truncate max-w-[120px]">
+                                            {pay?.details || (pay?.amount ? '—' : '')}
+                                        </td>
+                                        <td className="border border-slate-700 p-1 text-left font-mono" dir="ltr">
+                                            {pay && Number(pay.amount) > 0 ? Number(pay.amount).toLocaleString() : ''}
+                                        </td>
+
+                                        {/* كمرك */}
+                                        <td className="border border-slate-700 p-1 text-right truncate max-w-[120px]">
+                                            {cus?.details || (cus?.amount ? '—' : '')}
+                                        </td>
+                                        <td className="border border-slate-700 p-1 text-left font-mono" dir="ltr">
+                                            {cus && Number(cus.amount) > 0 ? Number(cus.amount).toLocaleString() : ''}
+                                        </td>
+
+                                        {/* نثريات */}
+                                        <td className="border border-slate-700 p-1 text-right truncate max-w-[120px]">
+                                            {exp?.details || (exp?.amount ? '—' : '')}
+                                        </td>
+                                        <td className="border border-slate-700 p-1 text-left font-mono" dir="ltr">
+                                            {exp && Number(exp.amount) > 0 ? Number(exp.amount).toLocaleString() : ''}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                        <tfoot>
+                            <tr className="bg-slate-200 border-2 border-slate-800 font-bold text-slate-900 text-[11px]">
+                                <td className="border border-slate-700 p-1.5 text-center">المجموع</td>
+                                <td className="border border-slate-700 p-1.5 text-right font-black">مجموع نطلب:</td>
+                                <td className="border border-slate-700 p-1.5 text-left font-mono font-black" dir="ltr">
+                                    {Number(inventory.total_receivables).toLocaleString()}
+                                </td>
+                                <td className="border border-slate-700 p-1.5 text-right font-black">مجموع المطلوبين:</td>
+                                <td className="border border-slate-700 p-1.5 text-left font-mono font-black" dir="ltr">
+                                    {Number(inventory.total_payables).toLocaleString()}
+                                </td>
+                                <td className="border border-slate-700 p-1.5 text-right font-black">مجموع الكمرك:</td>
+                                <td className="border border-slate-700 p-1.5 text-left font-mono font-black" dir="ltr">
+                                    {Number(inventory.total_customs).toLocaleString()}
+                                </td>
+                                <td className="border border-slate-700 p-1.5 text-right font-black">مجموع النثريات:</td>
+                                <td className="border border-slate-700 p-1.5 text-left font-mono font-black" dir="ltr">
+                                    {Number(inventory.total_expenses).toLocaleString()}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                {/* 3. Financial Summary & Equation Matrix (Excel Sheet) */}
+                <div className="mb-4 break-inside-avoid">
+                    <h3 className="font-bold text-xs mb-1.5 text-slate-800">
+                        ثانياً: خلاصة ومطابقة الحسابات والموجودات والأرباح (معادلة الجرد)
+                    </h3>
+
+                    <table className="w-full border-collapse border border-slate-700 text-xs">
+                        <thead>
+                            <tr className="bg-slate-300 border border-slate-700 font-bold text-slate-900">
+                                <th colSpan={4} className="p-2 text-center text-sm font-black">
+                                    جدول تسوية الأرصدة واحتساب صافي الأرباح
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td className="border border-slate-700 p-2 font-bold bg-slate-100 w-1/4">
+                                    رصيد الصندوق الفعلي (الكاش):
+                                </td>
+                                <td className="border border-slate-700 p-2 font-mono font-semibold text-left w-1/4" dir="ltr">
+                                    {Number(inventory.actual_cash).toLocaleString()} د.ع
+                                </td>
+                                <td className="border border-slate-700 p-2 font-bold bg-slate-100 w-1/4">
+                                    إجمالي مطلوبين (الدائنون):
+                                </td>
+                                <td className="border border-slate-700 p-2 font-mono text-left w-1/4" dir="ltr">
+                                    {Number(inventory.total_payables).toLocaleString()} د.ع
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="border border-slate-700 p-2 font-bold bg-slate-100">
+                                    رصيد الحسابات المصرفية:
+                                </td>
+                                <td className="border border-slate-700 p-2 font-mono font-semibold text-left" dir="ltr">
+                                    {Number(inventory.bank_balance).toLocaleString()} د.ع
+                                </td>
+                                <td className="border border-slate-700 p-2 font-bold bg-slate-100">
+                                    إجمالي مصاريف الكمرك:
+                                </td>
+                                <td className="border border-slate-700 p-2 font-mono text-left" dir="ltr">
+                                    {Number(inventory.total_customs).toLocaleString()} د.ع
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="border border-slate-700 p-2 font-bold bg-slate-100">
+                                    إجمالي ما نطلبه (نطلب):
+                                </td>
+                                <td className="border border-slate-700 p-2 font-mono font-semibold text-left" dir="ltr">
+                                    {Number(inventory.total_receivables).toLocaleString()} د.ع
+                                </td>
+                                <td className="border border-slate-700 p-2 font-bold bg-amber-100 text-amber-950">
+                                    2. مجموع الالتزامات (مطلوبين + كمرك):
+                                </td>
+                                <td className="border border-slate-700 p-2 font-mono font-black text-left bg-amber-50" dir="ltr">
+                                    {Number(inventory.total_liabilities).toLocaleString()} د.ع
+                                </td>
+                            </tr>
+                            <tr className="border-t-2 border-slate-700">
+                                <td className="border border-slate-700 p-2 font-bold bg-blue-100 text-blue-950">
+                                    1. إجمالي الرصيد المتوفر:
+                                    <span className="text-[10px] block font-normal text-slate-600">(كاش + مصارف + نطلب)</span>
+                                </td>
+                                <td className="border border-slate-700 p-2 font-mono font-black text-left bg-blue-50 text-sm text-blue-900" dir="ltr">
+                                    {Number(inventory.total_assets).toLocaleString()} د.ع
+                                </td>
+                                <td className="border border-slate-700 p-2 font-bold bg-slate-200 text-slate-950">
+                                    3. الموجود الكلي:
+                                    <span className="text-[10px] block font-normal text-slate-600">(الرصيد المتوفر - مجموع الالتزامات)</span>
+                                </td>
+                                <td className="border border-slate-700 p-2 font-mono font-black text-left bg-slate-100 text-sm text-slate-900" dir="ltr">
+                                    {Number(inventory.net_worth).toLocaleString()} د.ع
+                                </td>
+                            </tr>
+                            <tr className="border-t-2 border-slate-800 bg-slate-50">
+                                <td className="border border-slate-700 p-2 font-bold bg-slate-100">
+                                    4. الموجود الكلي السابق:
+                                    <span className="text-[10px] block font-normal text-slate-600">(المعتمد من الجرد السابق)</span>
+                                </td>
+                                <td className="border border-slate-700 p-2 font-mono font-bold text-left text-slate-700" dir="ltr">
+                                    {Number(inventory.previous_net_worth || 0).toLocaleString()} د.ع
+                                </td>
+                                <td className="border border-slate-700 p-2.5 font-black bg-emerald-100 text-emerald-950 text-sm">
+                                    5. الربح:
+                                    <span className="text-[10px] block font-normal text-emerald-800">(الموجود الكلي - الموجود الكلي السابق)</span>
+                                </td>
+                                <td className="border border-slate-700 p-2.5 font-mono font-black text-left bg-emerald-50 text-base" dir="ltr">
+                                    {Number(inventory.inventory_profit) >= 0 ? '+' : ''}{Number(inventory.inventory_profit).toLocaleString()} د.ع
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="border border-slate-700 p-1.5 font-bold bg-slate-50 text-slate-600">
+                                    نثريات تشغيلية (توثيق):
+                                </td>
+                                <td className="border border-slate-700 p-1.5 font-mono text-left text-slate-600" dir="ltr" colSpan={3}>
+                                    {Number(inventory.total_expenses).toLocaleString()} د.ع (للتوثيق الداخلي فقط ولا تدخل في حسابات الأرباح)
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* 4. Notes if available */}
+                {inventory.notes && (
+                    <div className="mb-4 p-2 border border-slate-700 bg-slate-50/50 break-inside-avoid">
+                        <span className="font-bold">ملاحظات إضافية: </span>
+                        <span>{inventory.notes}</span>
+                    </div>
+                )}
+
+                {/* 5. Official Signatures (Excel/Document Footer) */}
+                <div className="mt-8 pt-4 border-t-2 border-slate-800 grid grid-cols-3 gap-8 text-center break-inside-avoid">
+                    <div className="border border-slate-400 p-3 rounded">
+                        <p className="font-black text-slate-800 text-xs">منظم الكشف (المحاسب المالي)</p>
+                        <p className="mt-7 text-slate-400 font-mono text-[10px]">................................................</p>
+                        <p className="text-[11px] font-semibold text-slate-700 mt-1">{inventory.creator?.name || 'مستخدم النظام'}</p>
+                    </div>
+                    <div className="border border-slate-400 p-3 rounded">
+                        <p className="font-black text-slate-800 text-xs">التدقيق المالي والرقابة</p>
+                        <p className="mt-7 text-slate-400 font-mono text-[10px]">................................................</p>
+                        <p className="text-[11px] text-slate-600 mt-1">التوقيع والختم المعتمد</p>
+                    </div>
+                    <div className="border border-slate-400 p-3 rounded">
+                        <p className="font-black text-slate-800 text-xs">الإدارة العامة والمصادقة</p>
+                        <p className="mt-7 text-slate-400 font-mono text-[10px]">................................................</p>
+                        <p className="text-[11px] text-slate-600 mt-1">المصادقة والتاريخ</p>
+                    </div>
                 </div>
             </div>
         </AuthenticatedLayout>

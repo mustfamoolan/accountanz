@@ -193,23 +193,23 @@ export default function AuthenticatedLayout({ children, header, activeNav = 'das
     );
 
     return (
-        <div className="flex min-h-screen bg-muted/20" dir="rtl">
+        <div className="flex min-h-screen bg-muted/20 print:bg-white print:min-h-0 print:block" dir="rtl">
             {/* Desktop Sidebar (Right side for RTL) */}
-            <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:right-0 lg:w-64 border-l border-border bg-background z-20 shadow-sm">
+            <aside className="print:hidden hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:right-0 lg:w-64 border-l border-border bg-background z-20 shadow-sm">
                 <SidebarContent />
             </aside>
 
             {/* Mobile overlay */}
             {sidebarOpen && (
                 <div
-                    className="fixed inset-0 z-30 bg-black/50 backdrop-blur-xs lg:hidden transition-opacity"
+                    className="fixed inset-0 z-30 bg-black/50 backdrop-blur-xs lg:hidden transition-opacity print:hidden"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
 
             {/* Mobile Sidebar (Right drawer for RTL) */}
             <aside
-                className={`fixed inset-y-0 right-0 z-40 w-72 flex flex-col border-l border-border bg-background shadow-xl transform transition-transform duration-200 ease-in-out lg:hidden ${
+                className={`print:hidden fixed inset-y-0 right-0 z-40 w-72 flex flex-col border-l border-border bg-background shadow-xl transform transition-transform duration-200 ease-in-out lg:hidden ${
                     sidebarOpen ? 'translate-x-0' : 'translate-x-full'
                 }`}
             >
@@ -228,9 +228,9 @@ export default function AuthenticatedLayout({ children, header, activeNav = 'das
             </aside>
 
             {/* Main content wrapper */}
-            <div className="flex flex-1 flex-col min-w-0 lg:pr-64">
+            <div className="flex flex-1 flex-col min-w-0 lg:pr-64 print:pr-0 print:block">
                 {/* Top header */}
-                <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">
+                <header className="print:hidden sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">
                     <div className="flex items-center gap-3">
                         {/* Mobile menu hamburger button */}
                         <button
@@ -285,12 +285,14 @@ export default function AuthenticatedLayout({ children, header, activeNav = 'das
                 </header>
 
                 {/* Page body */}
-                <main className="flex-1 p-4 lg:p-6 pb-20 lg:pb-6">
+                <main className="flex-1 p-4 lg:p-6 pb-20 lg:pb-6 print:p-0">
                     {children}
                 </main>
             </div>
 
-            <Toaster position="top-center" dir="rtl" />
+            <div className="print:hidden">
+                <Toaster position="top-center" dir="rtl" />
+            </div>
         </div>
     );
 }
