@@ -102,7 +102,7 @@ export default function InventoriesIndex({ inventories, filters, stats }: Props)
     };
 
     const handleRecalculate = () => {
-        if (confirm('هل تريد إعادة احتساب وتحديث جميع سجلات الجرد السابقة بناءً على (الرصيد المتوفر السابق) لكل جرد؟')) {
+        if (confirm('هل تريد إعادة احتساب وتحديث جميع سجلات الجرد السابقة بناءً على (الموجود الكلي السابق) لكل جرد؟')) {
             router.post('/inventories/recalculate');
         }
     };
@@ -311,7 +311,7 @@ export default function InventoriesIndex({ inventories, filters, stats }: Props)
                                 size="sm"
                                 onClick={handleRecalculate}
                                 className="gap-1.5 text-xs h-9"
-                                title="إعادة احتساب كافة كشوفات الجرد السابقة بناءً على الرصيد المتوفر السابق"
+                                title="إعادة احتساب كافة كشوفات الجرد السابقة بناءً على الموجود الكلي السابق"
                             >
                                 <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
                                 <span>إعادة احتساب السجلات القديمة</span>

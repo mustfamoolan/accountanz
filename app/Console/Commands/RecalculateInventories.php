@@ -19,7 +19,7 @@ class RecalculateInventories extends Command
      *
      * @var string
      */
-    protected $description = 'Recalculate all periodic inventories so that previous baseline is the previous inventory total_assets (الرصيد المتوفر السابق).';
+    protected $description = 'Recalculate all periodic inventories so that previous baseline is the previous inventory net_worth (الموجود الكلي السابق).';
 
     /**
      * Execute the console command.
@@ -29,7 +29,7 @@ class RecalculateInventories extends Command
         $this->info('Starting recalculation of all periodic inventories...');
 
         $inventories = PeriodicInventory::orderBy('inventory_date')->orderBy('id')->get();
-        $previousAvailableBalance = 0.00;
+        $previousNetWorth = 0.00;
         $count = 0;
 
         foreach ($inventories as $inv) {
@@ -40,8 +40,8 @@ class RecalculateInventories extends Command
 
             $availableBalance = (float) $inv->actual_cash + (float) $inv->bank_balance + $totalReceivables;
             $totalLiabilities = $totalPayables + $totalCustoms;
-            $currentProfit = $availableBalance - $totalLiabilities;
-            $newProfit = $currentProfit - $previousAvailableBalance;
+            $currentNetWorth = $availableBalance - $totalLiabilities;
+            $profit = $currentNetWorth - $previousNetWorth;
 
             $inv->update([
                 'total_receivables' => $totalReceivables,
@@ -50,14 +50,14 @@ class RecalculateInventories extends Command
                 'total_expenses' => $totalExpenses,
                 'total_assets' => $availableBalance,
                 'total_liabilities' => $totalLiabilities,
-                'net_worth' => $currentProfit,
-                'previous_net_worth' => $previousAvailableBalance,
-                'inventory_profit' => $newProfit,
+                'net_worth' => $currentNetWorth,
+                'previous_net_worth' => $previousNetWorth,
+                'inventory_profit' => $profit,
             ]);
 
-            $this->line("Updated Inventory #{$inv->id} ({$inv->inventory_date->format('Y-m-d')}): Available={$availableBalance}, PrevAvailable={$previousAvailableBalance}, Profit={$newProfit}");
+            $this->line("Updated Inventory #{$inv->id} ({$inv->inventory_date->format('Y-m-d')}): NetWorth={$currentNetWorth}, PrevNetWorth={$previousNetWorth}, Profit={$profit}");
 
-            $previousAvailableBalance = $availableBalance;
+            $previousNetWorth = $currentNetWorth;
             $count++;
         }
 

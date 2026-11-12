@@ -116,7 +116,7 @@ export default function InventoryEdit({ inventory }: Props) {
         inventory_date: defaultDate,
         actual_cash: String(inventory.actual_cash || ''),
         bank_balance: String(inventory.bank_balance || ''),
-        previous_available_balance: String(inventory.previous_net_worth || 0),
+        previous_net_worth: String(inventory.previous_net_worth || 0),
         notes: inventory.notes || '',
     });
 
@@ -158,7 +158,7 @@ export default function InventoryEdit({ inventory }: Props) {
 
         const actualCash = parseFloat(formData.actual_cash) || 0;
         const bankBalance = parseFloat(formData.bank_balance) || 0;
-        const prevAvailableBalance = parseFloat(formData.previous_available_balance) || 0;
+        const prevNetWorth = parseFloat(formData.previous_net_worth) || 0;
 
         // 1. الرصيد المتوفر = رصيد الصندوق (كاش) + رصيد المصارف + مجموع نطلب
         const availableBalance = actualCash + bankBalance + totalReceivables;
@@ -167,10 +167,10 @@ export default function InventoryEdit({ inventory }: Props) {
         const totalLiabilities = totalPayables + totalCustoms;
 
         // 3. الموجود الكلي = الرصيد المتوفر - (المطلوبين + الكمرك)
-        const currentProfit = availableBalance - totalLiabilities;
+        const currentNetWorth = availableBalance - totalLiabilities;
 
-        // 4. ربح الجرد الجديد = الموجود الكلي - الرصيد المتوفر السابق
-        const newProfit = currentProfit - prevAvailableBalance;
+        // 4. الربح = الموجود الكلي - الموجود الكلي السابق
+        const profit = currentNetWorth - prevNetWorth;
 
         return {
             totalReceivables,
@@ -179,11 +179,11 @@ export default function InventoryEdit({ inventory }: Props) {
             totalExpenses,
             actualCash,
             bankBalance,
-            prevAvailableBalance,
+            prevNetWorth,
             availableBalance,
             totalLiabilities,
-            currentProfit,
-            newProfit,
+            currentNetWorth,
+            profit,
         };
     }, [rows, formData]);
 
@@ -208,6 +208,7 @@ export default function InventoryEdit({ inventory }: Props) {
             `/inventories/${inventory.id}`,
             {
                 ...formData,
+                previous_available_balance: formData.previous_net_worth, // backwards compatibility
                 receivables,
                 payables,
                 customs,
@@ -270,7 +271,7 @@ export default function InventoryEdit({ inventory }: Props) {
                     />
                     <StatCard
                         title="الموجود الكلي"
-                        value={calculations.currentProfit}
+                        value={calculations.currentNetWorth}
                         currency="د.ع"
                         color="primary"
                         icon={Scale}
@@ -278,17 +279,17 @@ export default function InventoryEdit({ inventory }: Props) {
                     />
                     <StatCard
                         title="الموجود الكلي السابق"
-                        value={calculations.prevAvailableBalance}
+                        value={calculations.prevNetWorth}
                         currency="د.ع"
                         color="muted"
                         icon={History}
-                        description="الرصيد المعتمد من الجرد السابق"
+                        description="الموجود الكلي للجرد السابق"
                     />
                     <StatCard
                         title="الربح"
-                        value={calculations.newProfit}
+                        value={calculations.profit}
                         currency="د.ع"
-                        color={calculations.newProfit >= 0 ? 'emerald' : 'muted'}
+                        color={calculations.profit >= 0 ? 'emerald' : 'muted'}
                         icon={TrendingUp}
                         description="الموجود الكلي - الموجود الكلي السابق"
                     />
@@ -593,19 +594,19 @@ export default function InventoryEdit({ inventory }: Props) {
 
                             <div className="space-y-1.5 pt-2 border-t border-border/60">
                                 <div className="flex justify-between items-center">
-                                    <Label htmlFor="previous_available_balance" className="font-semibold text-muted-foreground">
+                                    <Label htmlFor="previous_net_worth" className="font-semibold text-muted-foreground">
                                         الموجود الكلي السابق:
                                     </Label>
                                     <Badge variant="outline" className="text-[10px] font-mono">
-                                        الرصيد المعتمد من الجرد السابق
+                                        الموجود الكلي من الجرد السابق
                                     </Badge>
                                 </div>
                                 <Input
-                                    id="previous_available_balance"
+                                    id="previous_net_worth"
                                     type="number"
                                     step="any"
-                                    value={formData.previous_available_balance}
-                                    onChange={(e) => setData('previous_available_balance', e.target.value)}
+                                    value={formData.previous_net_worth}
+                                    onChange={(e) => setData('previous_net_worth', e.target.value)}
                                     className="h-9 font-mono text-xs bg-muted/30"
                                     dir="ltr"
                                 />
@@ -671,7 +672,7 @@ export default function InventoryEdit({ inventory }: Props) {
                                     <span className="text-[10px] text-muted-foreground">الرصيد المتوفر - مجموع الالتزامات</span>
                                 </div>
                                 <span className="font-mono text-sm font-bold text-foreground" dir="ltr">
-                                    {calculations.currentProfit.toLocaleString()} د.ع
+                                    {calculations.currentNetWorth.toLocaleString()} د.ع
                                 </span>
                             </div>
 
@@ -681,10 +682,10 @@ export default function InventoryEdit({ inventory }: Props) {
                                     <span className="font-bold text-foreground block">
                                         4. الموجود الكلي السابق:
                                     </span>
-                                    <span className="text-[10px] text-muted-foreground">الرصيد المعتمد من الجرد السابق</span>
+                                    <span className="text-[10px] text-muted-foreground">الموجود الكلي المسجل من الجرد السابق</span>
                                 </div>
                                 <span className="font-mono text-sm font-semibold text-muted-foreground" dir="ltr">
-                                    {calculations.prevAvailableBalance.toLocaleString()} د.ع
+                                    {calculations.prevNetWorth.toLocaleString()} د.ع
                                 </span>
                             </div>
 
@@ -695,20 +696,20 @@ export default function InventoryEdit({ inventory }: Props) {
                                         5. الربح:
                                     </span>
                                     <span className="text-[10px] text-muted-foreground">
-                                        الموجود الكلي ({calculations.currentProfit.toLocaleString()}) - الموجود الكلي السابق ({calculations.prevAvailableBalance.toLocaleString()})
+                                        الموجود الكلي ({calculations.currentNetWorth.toLocaleString()}) - الموجود الكلي السابق ({calculations.prevNetWorth.toLocaleString()})
                                     </span>
                                 </div>
                                 <div className="text-left font-mono">
                                     <span
                                         className={`text-lg font-black block ${
-                                            calculations.newProfit >= 0
+                                            calculations.profit >= 0
                                                 ? 'text-emerald-600 dark:text-emerald-400'
                                                 : 'text-rose-600 dark:text-rose-400'
                                         }`}
                                         dir="ltr"
                                     >
-                                        {calculations.newProfit >= 0 ? '+' : ''}
-                                        {calculations.newProfit.toLocaleString()} د.ع
+                                        {calculations.profit >= 0 ? '+' : ''}
+                                        {calculations.profit.toLocaleString()} د.ع
                                     </span>
                                     <span className="text-[9px] text-muted-foreground">
                                         سيتم تحديث سجل الجرد بهذه القيمة

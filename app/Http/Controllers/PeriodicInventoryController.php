@@ -71,13 +71,14 @@ class PeriodicInventoryController extends Controller
      */
     public function create()
     {
-        // Get the latest inventory's available balance (total_assets) to be used as previous available balance
+        // Get the latest inventory's net worth (الموجود الكلي) to be used as previous net worth
         $latest = PeriodicInventory::latest('inventory_date')->first();
-        $previousAvailableBalance = $latest ? (float) $latest->total_assets : 0;
+        $previousNetWorth = $latest ? (float) $latest->net_worth : 0;
 
         return Inertia::render('Inventories/Create', [
-            'previousAvailableBalance' => $previousAvailableBalance,
-            'previousProfit' => $previousAvailableBalance, // Backwards compatibility prop
+            'previousNetWorth' => $previousNetWorth,
+            'previousAvailableBalance' => $previousNetWorth, // Backwards compatibility
+            'previousProfit' => $previousNetWorth, // Backwards compatibility
         ]);
     }
 
@@ -91,6 +92,7 @@ class PeriodicInventoryController extends Controller
             'title' => 'nullable|string|max:255',
             'actual_cash' => 'nullable|numeric',
             'bank_balance' => 'nullable|numeric',
+            'previous_net_worth' => 'nullable|numeric',
             'previous_available_balance' => 'nullable|numeric',
             'previous_profit' => 'nullable|numeric',
             'receivables' => 'nullable|array',
@@ -112,7 +114,7 @@ class PeriodicInventoryController extends Controller
 
         $actualCash = (float) ($validated['actual_cash'] ?? 0);
         $bankBalance = (float) ($validated['bank_balance'] ?? 0);
-        $previousAvailableBalance = (float) ($validated['previous_available_balance'] ?? $validated['previous_profit'] ?? 0);
+        $previousNetWorth = (float) ($validated['previous_net_worth'] ?? $validated['previous_available_balance'] ?? $validated['previous_profit'] ?? 0);
 
         // Core Accounting Equations
         // 1. الرصيد المتوفر = رصيد الصندوق (كاش) + رصيد المصارف + نطلب
@@ -122,10 +124,10 @@ class PeriodicInventoryController extends Controller
         $totalLiabilities = $totalPayables + $totalCustoms;
 
         // 3. الموجود الكلي = الرصيد المتوفر - (المطلوبين + الكمرك)
-        $currentProfit = $availableBalance - $totalLiabilities;
+        $currentNetWorth = $availableBalance - $totalLiabilities;
 
-        // 4. ربح الجرد الجديد = الموجود الكلي - الرصيد المتوفر السابق
-        $newProfit = $currentProfit - $previousAvailableBalance;
+        // 4. الربح = الموجود الكلي - الموجود الكلي السابق
+        $profit = $currentNetWorth - $previousNetWorth;
 
         $inventory = PeriodicInventory::create([
             'title' => $validated['title'] ?: 'جرد بتاريخ ' . $validated['inventory_date'],
@@ -142,9 +144,9 @@ class PeriodicInventoryController extends Controller
             'bank_balance' => $bankBalance,
             'total_assets' => $availableBalance,
             'total_liabilities' => $totalLiabilities,
-            'net_worth' => $currentProfit,
-            'previous_net_worth' => $previousAvailableBalance,
-            'inventory_profit' => $newProfit,
+            'net_worth' => $currentNetWorth,
+            'previous_net_worth' => $previousNetWorth,
+            'inventory_profit' => $profit,
             'notes' => $validated['notes'] ?? null,
             'created_by' => auth()->id(),
         ]);
@@ -206,7 +208,7 @@ class PeriodicInventoryController extends Controller
 
         $actualCash = (float) ($validated['actual_cash'] ?? 0);
         $bankBalance = (float) ($validated['bank_balance'] ?? 0);
-        $previousAvailableBalance = (float) ($validated['previous_available_balance'] ?? $validated['previous_profit'] ?? 0);
+        $previousNetWorth = (float) ($validated['previous_net_worth'] ?? $validated['previous_available_balance'] ?? $validated['previous_profit'] ?? 0);
 
         // Core Accounting Equations
         // 1. الرصيد المتوفر = رصيد الصندوق (كاش) + رصيد المصارف + نطلب
@@ -216,10 +218,10 @@ class PeriodicInventoryController extends Controller
         $totalLiabilities = $totalPayables + $totalCustoms;
 
         // 3. الموجود الكلي = الرصيد المتوفر - (المطلوبين + الكمرك)
-        $currentProfit = $availableBalance - $totalLiabilities;
+        $currentNetWorth = $availableBalance - $totalLiabilities;
 
-        // 4. ربح الجرد الجديد = الموجود الكلي - الرصيد المتوفر السابق
-        $newProfit = $currentProfit - $previousAvailableBalance;
+        // 4. الربح = الموجود الكلي - الموجود الكلي السابق
+        $profit = $currentNetWorth - $previousNetWorth;
 
         $inventory->update([
             'title' => $validated['title'] ?: 'جرد بتاريخ ' . $validated['inventory_date'],
@@ -236,9 +238,9 @@ class PeriodicInventoryController extends Controller
             'bank_balance' => $bankBalance,
             'total_assets' => $availableBalance,
             'total_liabilities' => $totalLiabilities,
-            'net_worth' => $currentProfit,
-            'previous_net_worth' => $previousAvailableBalance,
-            'inventory_profit' => $newProfit,
+            'net_worth' => $currentNetWorth,
+            'previous_net_worth' => $previousNetWorth,
+            'inventory_profit' => $profit,
             'notes' => $validated['notes'] ?? null,
         ]);
 
@@ -247,12 +249,12 @@ class PeriodicInventoryController extends Controller
     }
 
     /**
-     * Recalculate all periodic inventories so that previous baseline is the previous inventory's total_assets (الرصيد المتوفر السابق).
+     * Recalculate all periodic inventories so that previous baseline is the previous inventory's net_worth (الموجود الكلي السابق).
      */
     public function recalculateAll()
     {
         $inventories = PeriodicInventory::orderBy('inventory_date')->orderBy('id')->get();
-        $previousAvailableBalance = 0.00;
+        $previousNetWorth = 0.00;
 
         foreach ($inventories as $inv) {
             $totalReceivables = collect($inv->receivables_items ?? [])->sum(fn ($i) => (float) ($i['amount'] ?? 0));
@@ -262,8 +264,8 @@ class PeriodicInventoryController extends Controller
 
             $availableBalance = (float) $inv->actual_cash + (float) $inv->bank_balance + $totalReceivables;
             $totalLiabilities = $totalPayables + $totalCustoms;
-            $currentProfit = $availableBalance - $totalLiabilities;
-            $newProfit = $currentProfit - $previousAvailableBalance;
+            $currentNetWorth = $availableBalance - $totalLiabilities;
+            $profit = $currentNetWorth - $previousNetWorth;
 
             $inv->update([
                 'total_receivables' => $totalReceivables,
@@ -272,17 +274,17 @@ class PeriodicInventoryController extends Controller
                 'total_expenses' => $totalExpenses,
                 'total_assets' => $availableBalance,
                 'total_liabilities' => $totalLiabilities,
-                'net_worth' => $currentProfit,
-                'previous_net_worth' => $previousAvailableBalance,
-                'inventory_profit' => $newProfit,
+                'net_worth' => $currentNetWorth,
+                'previous_net_worth' => $previousNetWorth,
+                'inventory_profit' => $profit,
             ]);
 
-            // This inventory's available balance becomes the previous for the next inventory
-            $previousAvailableBalance = $availableBalance;
+            // This inventory's net worth (الموجود الكلي) becomes the previous net worth for the next inventory
+            $previousNetWorth = $currentNetWorth;
         }
 
         return redirect()->route('inventories.index')
-            ->with('success', 'تمت إعادة احتساب وتحديث كافة سجلات الجرد السابقة وفق (الرصيد المتوفر السابق) بنجاح.');
+            ->with('success', 'تمت إعادة احتساب وتحديث كافة سجلات الجرد السابقة وفق (الموجود الكلي السابق) بنجاح.');
     }
 
     /**
